@@ -39,72 +39,48 @@ def labelFormat(label):
 
 # adds new branches to meta-list
 def addBranches(metaList):
-    decision = 0  
-    choice = False
     MHCfilename = getMHCfilename()
     filepathRootFolder = getFilepathRootFolder()
 
-    while(decision != 1):
-        userInput = input("Quantify\n1.Finish\n2.Modelled Network\n3.Customize Network\nEnter:") 
+    while True:
+        print("\nQuantify\n1.Finish\n2.Modelled Network\n3.Customize Network")
+        userInput = input("Enter: ")
 
-        try:
-            decision = int(userInput)
-            choice = True
-        except ValueError:
-            print("Invalid input. Enter an integer value")
-            choice = False
-
-        if decision < 1 or decision > 3:
-            print("Invalid input. Choose between listed options")
-            choice = False
-
-        if choice and decision == 2:
-            totalBranches = getNumBranches(filepathRootFolder,MHCfilename)
-            
-            for branch in range(totalBranches):
-                if branch + 1 < 10:  
-                    fNumStr = "00" + str(branch+1)
-                else:
-                    fNumStr = "0" + str(branch+1)
-
+        if userInput == "1":
+            break
+        elif userInput == "2":
+            totalBranches = getNumBranches(filepathRootFolder, MHCfilename)
+            for branch_idx in range(1, totalBranches + 1):
+                fNumStr = f"{branch_idx:03d}"
                 filepath_inv = getFilepathTargetFile(filepathRootFolder, MHCfilename, fNumStr, "inv")
-                #todo: retrieve start and end node of branch and append to metaList instead of appending all nodes in branch to metaList
                 
                 try:
                     with open(filepath_inv) as file:
-                        tempBranch_modelled = []
-                        rowCount = 1
-                        for line in file:
-                            if rowCount > 3:
-                                row = line.strip().split(",")
-                                try:
-                                    nodeID = labelFormat(row[2])
-                                except ValueError:
-                                    row = line.strip().split("  ")
-                                    nodeID = labelFormat(row[2])
-
-                                if rowCount == 4:
-                                    tempBranch_modelled.append(nodeID)
-                                elif rowCount > 4:
-                                    if rowCount == 5:
-                                        tempBranch_modelled.append(nodeID)
-                                    else:
-                                        tempBranch_modelled[-1] = nodeID
-
-                            rowCount += 1
-
+                        lines = file.readlines()
+                        # Skip header (first 3 lines)
+                        data_lines = [l for l in lines[3:] if l.strip()]
+                        if not data_lines:
+                            continue
+                        
+                        # First node
+                        first_row = data_lines[0].split(",")
+                        start_node = labelFormat(first_row[2] if len(first_row) > 2 else first_row[0])
+                        
+                        # Last node
+                        last_row = data_lines[-1].split(",")
+                        end_node = labelFormat(last_row[2] if len(last_row) > 2 else last_row[0])
+                        
+                        metaList.append([start_node, end_node])
                 except FileNotFoundError:
                     print(f"Error: INV file not found at {filepath_inv}")
                     sys.exit(1)
-
-        if choice and decision == 3:
-
-            tempBranch = []
-            upstream = input("Upstream node label:")
-            downstream = input("Downstream node label:")
-            tempBranch.append(upstream)
-            tempBranch.append(downstream)
-            metaList.append(tempBranch)
+        elif userInput == "3":
+            upstream = input("Upstream node label: ").strip()
+            downstream = input("Downstream node label: ").strip()
+            if upstream and downstream:
+                metaList.append([upstream, downstream])
+        else:
+            print("Invalid input. Please choose 1, 2, or 3.")
 
     return MHCfilename, filepathRootFolder
 
