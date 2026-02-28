@@ -1,0 +1,22 @@
+Manhole data file
+C:\pw_workdir\dms81241\3522.10.00.GZA.Sewer Asbuilt.dwg
+Manholes numbered in branch order
+No Manholes    : 9
+No Pipes       : 8
+Asbuilt - Sewer NET B
+Survey System  : LO29
+ 250 
+Ground Levels extracted from : Civil 3D TIN (Surface = 'C3D-Tanganani NGL + Proposed')
+Stormwater Hydraulic Inflows Used:
+Inflows have been specified in l/s
+MH No.             Y Lo           X Lo      NGL   No Pipes   Pipe indexes    Inflow (l/s)  Persons  Handle
+MH
+"MH110",     97472.657   2870099.904 1458.477   1    1    0    0    0      0.0000        0      1FBE2
+"MH111",     97496.493   2870106.183 1458.286   2    1    2    0    0      0.0000        0      1FBE4
+"MH113",     97545.527   2870109.932 1458.044   2    2    3    0    0      0.0000        0      1FBE6
+"MH114",     97626.100   2870114.386 1457.243   2    3    4    0    0      0.0000        0      1FBE8
+"MH115",     97703.613   2870117.001 1454.699   2    4    5    0    0      0.0000        0      1FBE9
+"MH116",     97783.545   2870113.253 1452.166   2    5    6    0    0      0.0000        0      1FBE7
+"MH117",     97862.054   2870109.273 1449.332   2    6    7    0    0      0.0000        0      1FBE5
+"MH118",     97937.349   2870104.024 1446.854   2    7    8    0    0      0.0000        0      1FBE3
+"MH118A",     97969.353   2870096.340 1444.864   -1    8    0    0    0      0.0000        0      1FBE1

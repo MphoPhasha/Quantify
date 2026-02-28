@@ -1,0 +1,37 @@
+
+Pipe Network Hydraulic Design
+
+HYDRAULIC RESULTS FOR : C:\Users\41635\OneDrive - Bigen Group\41635\Tanganani\Ext 41\Asbuilt\PM\Asbuilt - Sewer NET B  ---  06-03-2025
+Job Description       : Asbuilt - Sewer NET B
+
+Design Parameters
+=================
+Ground level data source    :  Civil 3D TIN Surface = Tanganani NGL + Proposed
+Pipe Schedule File          :  C:\Technocad\PipeMate2023\PVC-Class 34 Solid heavy duty.Sch
+Manning Coefficient         :  0.0120
+Minimum Nominal Diameter    :  160mm uPVC Class 34
+Minimum Internal Diameter   :  151 mm
+Starting Grade              :  1:  80
+Minimum Cover               : 1000 mm
+Design Pipe Full fraction   :  0.67 x Diameter for calculation of Qmax and Vmax.
+Pipe inverts are forced to tie in at all manholes
+Lower velocity flag         :  0.50 m/s
+Upper velocity flag         :  2.50 m/s
+Stormwater inflows used as presented
+Inflows have been specified in l/s
+Infiltration factor         :   0 %
+
+==========================================================================================
+Pipe   U/S    D/S       Grade  Length   ID   Peak      Qdes   Vdes      Qmax   Vmax   Cap.
+ No     MH     MH         1:     (m)   (mm)  factor    (l/s)  (m/s)     (l/s)  (m/s)   %
+==========================================================================================
+
+BRANCH No1
+   1 "MH01"  "MH02"    80.0    24.65   151    1.000      0.00   0.0      14.82   1.16   0.0
+   2 "MH02"  "MH03"   200.0    49.18   151    1.000      0.00   0.0       9.37   0.73   0.0
+   3 "MH03"  "MH04"   118.7    80.70   151    1.000      0.00   0.0      12.17   0.95   0.0
+   4 "MH04"  "MH05"    30.5    77.56   151    1.000      0.00   0.0      24.01   1.88   0.0
+   5 "MH05"  "MH06"    31.6    80.02   151    1.000      0.00   0.0      23.58   1.85   0.0
+   6 "MH06"  "MH07"    27.7    78.61   151    1.000      0.00   0.0      25.17   1.97   0.0
+   7 "MH07"  "MH08"    30.5    75.48   151    1.000      0.00   0.0      24.02   1.88   0.0
+   8 "MH08"  "MH09"    16.5    32.91   151    1.000      0.00   0.0      32.59   2.56   0.0

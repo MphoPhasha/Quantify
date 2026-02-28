@@ -1,0 +1,8 @@
+DESIGN PIPE FULL FRACTION OF DIAMETER FOR C:\Users\41635\OneDrive - Bigen Group\41635\Tanganani\Ext 41\Asbuilt\PM\Asbuilt - Sewer004.Inv
+ 0.67 
+CH , LEVEL-GRADE-DROP, MH DESC., DIAM (mm) , FLOW (l/s) , n , PIPE DETAILS TO RIGHT or ",BEDDING TO RIGHT or "
+    0.000, 1461.060000  ,"MH026", 151 ,   0.000 , 0.012 , "160mm uPVC Class 34", "Flexible pipe bedding"
+   78.771, 1460.115000  ,"MH027", 151 ,   0.000 , 0.012 , "160mm uPVC Class 34", "Flexible pipe bedding"
+   78.771,   -0.050     ,"MH027", 151 ,   0.000 , 0.012 , "160mm uPVC Class 34", "Flexible pipe bedding"
+  117.901, 1459.769000  ,"MH024", 151 ,   0.000 , 0.012 , "160mm uPVC Class 34", "Flexible pipe bedding"
+  117.901,   -0.050     ,"MH024", 151 ,   0.000 , 0.012 , "160mm uPVC Class 34", "Flexible pipe bedding"

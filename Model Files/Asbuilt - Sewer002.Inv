@@ -1,0 +1,16 @@
+DESIGN PIPE FULL FRACTION OF DIAMETER FOR C:\Users\41635\OneDrive - Bigen Group\41635\Tanganani\Ext 41\Asbuilt\PM\Asbuilt - Sewer002.Inv
+ 0.67 
+CH , LEVEL-GRADE-DROP, MH DESC., DIAM (mm) , FLOW (l/s) , n , PIPE DETAILS TO RIGHT or ",BEDDING TO RIGHT or "
+    0.000, 1465.824000  ,"MH019", 151 ,   0.000 , 0.012 , "160mm uPVC Class 34", "Flexible pipe bedding"
+   27.400, 1465.182000  ,"MH020", 151 ,   0.000 , 0.012 , "160mm uPVC Class 34", "Flexible pipe bedding"
+   27.400,   -0.050     ,"MH020", 151 ,   0.000 , 0.012 , "160mm uPVC Class 34", "Flexible pipe bedding"
+   88.737, 1464.654000  ,"MH021", 151 ,   0.000 , 0.012 , "160mm uPVC Class 34", "Flexible pipe bedding"
+   88.737,   -0.050     ,"MH021", 151 ,   0.000 , 0.012 , "160mm uPVC Class 34", "Flexible pipe bedding"
+  113.694, 1464.376000  ,"MH022", 151 ,   0.000 , 0.012 , "160mm uPVC Class 34", "Flexible pipe bedding"
+  113.694,   -0.050     ,"MH022", 151 ,   0.000 , 0.012 , "160mm uPVC Class 34", "Flexible pipe bedding"
+  174.804, 1461.713000  ,"MH023", 151 ,   0.000 , 0.012 , "160mm uPVC Class 34", "Flexible pipe bedding"
+  174.804,   -0.050     ,"MH023", 151 ,   0.000 , 0.012 , "160mm uPVC Class 34", "Flexible pipe bedding"
+  208.990, 1459.769000  ,"MH024", 151 ,   0.000 , 0.012 , "160mm uPVC Class 34", "Flexible pipe bedding"
+  208.990,   -0.050     ,"MH024", 151 ,   0.000 , 0.012 , "160mm uPVC Class 34", "Flexible pipe bedding"
+  261.189, 1459.301000  ,"MH06", 151 ,   0.000 , 0.012 , "160mm uPVC Class 34", "Flexible pipe bedding"
+  261.189,   -0.050     ,"MH06", 151 ,   0.000 , 0.012 , "160mm uPVC Class 34", "Flexible pipe bedding"

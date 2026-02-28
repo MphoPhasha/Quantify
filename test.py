@@ -1,0 +1,64 @@
+def getFilepathTargetFile_MHC():
+    rawString = r"{}"
+    formattedFilepath = rawString.format("C:\\Users\\mphas\\Documents\\Dev\\Quantify\\Model Files" + "\\" + "Asbuilt - Sewer" + "." + "" + "MHC")  
+    return formattedFilepath
+
+def labelFormat(label):
+    node = ""
+    for char in label:
+        if char == '"' or char == ' ' :
+            node = node
+        else:
+            node += char
+    return node
+
+filepath_mhc = getFilepathTargetFile_MHC()
+
+try:
+    with open(filepath_mhc) as file:
+        rowCountMHC = 1
+        for line in file:
+            if rowCountMHC > 13:
+                row = line.strip().split(",")
+                try:
+                    mhc_node = labelFormat(row[0])
+                except IndexError:
+                    print("Error: row not delimited by comma in MHC file")
+
+                row = line.strip()
+                columnCount = 1
+                trackReached = 0
+                reachedNewColumn = False
+                endOfNodeLabel = False
+                nglString = ""
+                for char in row:
+                    
+                    if not endOfNodeLabel:
+                        if char == ",":
+                            endOfNodeLabel = True
+
+                    if endOfNodeLabel and char != ",":
+                        if char != " ":
+                            if trackReached == 1:
+                                reachedNewColumn = False
+                            else:
+                                reachedNewColumn = True
+                            trackReached = 1
+                        else:
+                            trackReached = 0
+
+                    if reachedNewColumn:
+                        columnCount += 1
+                        reachedNewColumn = False
+                    
+                    if columnCount == 4:
+                        nglString += char
+
+            rowCountMHC += 1
+
+except FileNotFoundError:
+    print(f"Error: MHC file not found at")
+
+print(nglString)
+
+

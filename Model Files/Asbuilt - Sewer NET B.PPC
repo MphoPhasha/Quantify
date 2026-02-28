@@ -1,0 +1,19 @@
+Pipe data file
+C:\pw_workdir\dms81241\3522.10.00.GZA.Sewer Asbuilt.dwg
+Manholes numbered in branch order
+No Manholes    : 9
+No Pipes       : 8
+Asbuilt - Sewer NET B
+Survey System  : LO29
+ 250 
+PIPE NO   LENGTH         MH1      MH2      HANDLE
+  P        (m)
+    1     24.649200        1        2      CE2F
+    2     49.177101        2        3      CE30
+    3     80.695999        3        4      CE31
+    4     77.557098        4        5      CE32
+    5     80.019798        5        6      CE33
+    6     78.609802        6        7      CE34
+    7     75.477699        7        8      CE35
+    8     32.913502        8        9      CE36
+Total    499.100m
