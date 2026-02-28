@@ -1,9 +1,5 @@
 import openpyxl
-
-bulk = []
-link = []
-internal = []
-rearrangedBranch = []
+import os
 
 def getMHCfilename():
     filename = input("Enter MHC filename: ")
@@ -15,31 +11,26 @@ def getFilepathRootFolder():
     return filepath
 
 # filepath to target file inside folder
+import os
+
 def getFilepathTargetFile(filePathRootFolder, filename, fileNumber, extension):
-    rawString = r"{}"
-    formattedFilepath = rawString.format(filePathRootFolder + "\\" + filename + fileNumber + "." + extension.upper())  
-    return formattedFilepath
+    return os.path.join(filePathRootFolder, f"{filename}{fileNumber}.{extension.upper()}")
 
 def getFilepathTargetFile_MHC(filePathRootFolder, filename, extension  = "mhc"):
-    rawString = r"{}"
-    formattedFilepath = rawString.format(filePathRootFolder + "\\" + filename + "." + extension.upper())  
-    return formattedFilepath
+    return os.path.join(filePathRootFolder, f"{filename}.{extension.upper()}")
 
 def getNumBranches(filepathRootFolder,MHCfilename):
     BranchFilePath = getFilepathTargetFile(filepathRootFolder, MHCfilename,"", "brn")
     try:
         with open(BranchFilePath) as file:
-            rowCount = 0
-            for line in file:
-                if rowCount == 1:
-                    numBranches = line.strip()
-                    break
-                rowCount += 1
-
-        return int(numBranches)
-    
+            lines = file.readlines()
+            if len(lines) > 1:
+                return int(lines[1].strip())
     except FileNotFoundError:
-        print("File Not Found")
+        print(f"Error: Branch file not found at {BranchFilePath}")
+    except ValueError:
+        print(f"Error: Could not parse number of branches in {BranchFilePath}")
+    return 0
 
 # Removes quotation mark or whitespace from node-label inside inv file
 def labelFormat(label):
@@ -930,7 +921,7 @@ def generateSpreadsheet(nodeLabels, pipeTypes, innerDiameters, outsideDiameters,
     wb.save("Quantified_sewer.xlsx")
 
 def main():
-
+    link = []
     MHC_filename, filepath_rootFolder = addBranches(link)
     print(link)
     print(MHC_filename)
