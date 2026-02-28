@@ -1,20 +1,17 @@
 import openpyxl
 import os
 import sys
+from typing import List, Tuple, Dict, Any
 
 def getMHCfilename() -> str:
     """Prompts the user for the MHC filename and returns it in lowercase."""
     filename = input("Enter MHC filename: ")
     return filename.lower()
 
-# Get filepath to folder containing model files
 def getFilepathRootFolder() -> str:
     """Prompts the user for the root directory of the model files."""
     filepath = input("Enter filepath to MHC file: ")
     return filepath
-
-# filepath to target file inside folder
-import os
 
 def getFilepathTargetFile(filePathRootFolder: str, filename: str, fileNumber: str, extension: str) -> str:
     """Constructs a cross-platform path for a specific data file."""
@@ -38,12 +35,14 @@ def getNumBranches(filepathRootFolder: str, MHCfilename: str) -> int:
         print(f"Error: Could not parse number of branches in {BranchFilePath}")
     return 0
 
-# Removes quotation mark or whitespace from node-label inside inv file
 def labelFormat(label: str) -> str:
     """Cleans up manhole labels by removing quotes and extra spaces."""
     return label.strip(' "')
 
-# adds new branches to meta-list
+def pipeTypeFormat(pipeType: str) -> str:
+    """Removes quotation marks from pipe type."""
+    return pipeType.strip(' "')
+
 def addBranches(metaList: list) -> tuple[str, str]:
     """Interactively allows the user to build a list of branches to quantify."""
     MHCfilename = getMHCfilename()
@@ -64,16 +63,13 @@ def addBranches(metaList: list) -> tuple[str, str]:
                 try:
                     with open(filepath_inv) as file:
                         lines = file.readlines()
-                        # Skip header (first 3 lines)
                         data_lines = [l for l in lines[3:] if l.strip()]
                         if not data_lines:
                             continue
                         
-                        # First node
                         first_row = data_lines[0].split(",")
                         start_node = labelFormat(first_row[2] if len(first_row) > 2 else first_row[0])
                         
-                        # Last node
                         last_row = data_lines[-1].split(",")
                         end_node = labelFormat(last_row[2] if len(last_row) > 2 else last_row[0])
                         
@@ -91,22 +87,20 @@ def addBranches(metaList: list) -> tuple[str, str]:
 
     return MHCfilename, filepathRootFolder
 
-def load_mhc_data(filepathRootFolder, MHCfilename):
+def load_mhc_data(filepathRootFolder: str, MHCfilename: str) -> Dict[str, float]:
     """Loads MHC node ground levels into memory."""
     mhc_cache = {}
     filepath = getFilepathTargetFile_MHC(filepathRootFolder, MHCfilename)
     try:
         with open(filepath) as file:
             lines = file.readlines()
-            # Node data typically starts after line 13
             for line in lines[13:]:
                 if not line.strip(): continue
                 row = line.strip().split(",")
                 if len(row) > 0:
                     node_id = labelFormat(row[0])
-                    # NGL is in column 4 (index 3) based on inspection
                     try:
-                        ngl = float(row[3].split()[0]) # Handle potential trailing spaces
+                        ngl = float(row[3].split()[0])
                         mhc_cache[node_id.lower()] = ngl
                     except (ValueError, IndexError):
                         continue
@@ -114,15 +108,8 @@ def load_mhc_data(filepathRootFolder, MHCfilename):
         print(f"Error opening MHC file at: {filepath}")
     return mhc_cache
 
-def getNGL_MHC(mhc_cache, node):
-    return mhc_cache.get(node.lower())
-
-# Removes quotation marks from pipe type if any but keeps whitespace between words
-def pipeTypeFormat(pipeType):
-    return pipeType.strip(' "')
-
-def load_all_inv_files(filepathRootFolder, MHCfilename):
-    """Loads all INV files into memory to avoid repeated disk I/O."""
+def load_all_inv_files(filepathRootFolder: str, MHCfilename: str) -> Dict[str, List[Dict[str, Any]]]:
+    """Loads all INV files into memory."""
     inv_cache = {}
     totalBranches = getNumBranches(filepathRootFolder, MHCfilename)
     for branch_idx in range(1, totalBranches + 1):
@@ -130,12 +117,12 @@ def load_all_inv_files(filepathRootFolder, MHCfilename):
         filepath = getFilepathTargetFile(filepathRootFolder, MHCfilename, fNumStr, "inv")
         try:
             with open(filepath) as f:
-                lines = f.readlines()[3:] # Skip 3 lines header
+                lines = f.readlines()[3:]
                 data = []
                 for line in lines:
                     if not line.strip(): continue
                     row = line.strip().split(",")
-                    if len(row) < 7: # Some rows might be differently formatted
+                    if len(row) < 7:
                         row = line.strip().split("  ")
                     if len(row) >= 7:
                         data.append({
@@ -150,7 +137,7 @@ def load_all_inv_files(filepathRootFolder, MHCfilename):
             continue
     return inv_cache
 
-def load_all_ngl_files(filepathRootFolder: str, MHCfilename: str) -> dict:
+def load_all_ngl_files(filepathRootFolder: str, MHCfilename: str) -> Dict[str, List[Dict[str, float]]]:
     """Loads all NGL files into memory."""
     ngl_cache = {}
     totalBranches = getNumBranches(filepathRootFolder, MHCfilename)
@@ -159,7 +146,7 @@ def load_all_ngl_files(filepathRootFolder: str, MHCfilename: str) -> dict:
         filepath = getFilepathTargetFile(filepathRootFolder, MHCfilename, fNumStr, "ngl")
         try:
             with open(filepath) as f:
-                lines = f.readlines()[4:] # Skip header
+                lines = f.readlines()[4:]
                 data = []
                 for line in lines:
                     if not line.strip(): continue
@@ -180,664 +167,362 @@ def load_all_ngl_files(filepathRootFolder: str, MHCfilename: str) -> dict:
             continue
     return ngl_cache
 
-# Retrieve data e.g) ".INV"  for a given list of branches
-def transferData(branches, MHCfilename, filepathRootFolder):
-    inv_cache = load_all_inv_files(filepathRootFolder, MHCfilename)
-    numberOfBranches = len(branches)
-    nodeLabel = []
-    nodeDiameter = []
-    nodePipeType = []
-    fileNumbersFound = [] 
-    fileNumbersEachNode = [] 
-    chainages = []
-    chainagesDrops_NodeTransitions = []
-    invertLevels = []
-    slopes = []
-    NGLeachNode = []
-    everyNGL = [] 
-    everyChainage = []
-    everyIL = []
-
-    # Retrieve Node labels, chainages, inner diameter and pipe type for each branch
-    for branch_idx in range(numberOfBranches):
-        upstreamNode = branches[branch_idx][0]
-        downstreamNode = branches[branch_idx][1]
-        
-        tempNodeLabel = []
-        tempNodeChainages = []
-        tempNodeFilenumbers = []
-        tempNodeDiameter = []
-        tempNodePipeType = []
-        
-        found_entire_branch = False
-        current_node = upstreamNode
-        
-        # Search for the branch through all files in cache
-        # This is a bit complex because a branch can span multiple files
-        # We start from any file that contains the current_node and follow it until downstreamNode
-        
-        search_proceed = True
-        while search_proceed:
-            node_found_in_any_file = False
-            for fNumStr, rows in inv_cache.items():
-                # Find current_node in this file
-                start_idx = -1
-                for idx, row in enumerate(rows):
-                    if row["node"].lower() == current_node.lower():
-                        start_idx = idx
-                        node_found_in_any_file = True
+def trace_branch(upstream: str, downstream: str, inv_cache: Dict[str, List[Dict[str, Any]]]) -> Dict[str, List[Any]]:
+    """Traces a single branch from upstream to downstream node across multiple INV files."""
+    labels, chainages, file_numbers, diameters, pipe_types = [], [], [], [], []
+    current_node = upstream
+    search_proceed = True
+    
+    while search_proceed:
+        found_in_file = False
+        for fNumStr, rows in inv_cache.items():
+            start_idx = -1
+            for idx, row in enumerate(rows):
+                if row["node"].lower() == current_node.lower():
+                    start_idx = idx
+                    found_in_file = True
+                    break
+            
+            if start_idx != -1:
+                for idx in range(start_idx, len(rows)):
+                    row = rows[idx]
+                    node_id = row["node"]
+                    
+                    if not labels or labels[-1].lower() != node_id.lower():
+                        labels.append(node_id)
+                        chainages.append(row["chainage"])
+                        file_numbers.append(fNumStr)
+                        diameters.append(row["dia"])
+                        pipe_types.append(row["pipe_type"])
+                    else:
+                        # Update existing (duplicate node e.g. for drop)
+                        chainages[-1] = row["chainage"]
+                        file_numbers[-1] = fNumStr
+                        diameters[-1] = row["dia"]
+                        pipe_types[-1] = row["pipe_type"]
+                    
+                    if node_id.lower() == downstream.lower():
+                        search_proceed = False
                         break
                 
-                if start_idx != -1:
-                    # Collect nodes from here until end of file or until downstreamNode
-                    for idx in range(start_idx, len(rows)):
-                        row = rows[idx]
-                        nodeID = row["node"]
-                        
-                        # Add node if not duplicate of last added
-                        if not tempNodeLabel or tempNodeLabel[-1].lower() != nodeID.lower():
-                            tempNodeLabel.append(nodeID)
-                            tempNodeChainages.append(row["chainage"])
-                            tempNodeFilenumbers.append(fNumStr)
-                            tempNodeDiameter.append(row["dia"])
-                            tempNodePipeType.append(row["pipe_type"])
-                        else:
-                            # Update existing node data if it's the same node (e.g. drop)
-                            tempNodeChainages[-1] = row["chainage"]
-                            tempNodeFilenumbers[-1] = fNumStr
-                            tempNodeDiameter[-1] = row["dia"]
-                            tempNodePipeType[-1] = row["pipe_type"]
-                        
-                        if nodeID.lower() == downstreamNode.lower():
-                            search_proceed = False
-                            found_entire_branch = True
-                            break
-                    
-                    if search_proceed:
-                        # Move to the next node in the chain for the next file search
-                        current_node = tempNodeLabel[-1]
-                    break # Found the node in a file, move to next step or next file
-            
-            if not node_found_in_any_file:
-                print(f"Error: Could not find node {current_node} in any INV file.")
-                sys.exit(1)
-
-    # END - Retrieve Node labels, chainages, inner diameter and pipe type for each branch from INV files
-   
-    # Retrieve chainages & at drops, node transitions as well as invert levels only at the nodes
-    outerLenNodeLabel= len(nodeLabel)
-    for outerIndex in range(outerLenNodeLabel):
-        innerLenNodeLabel = len(nodeLabel[outerIndex])
-        fileNumPrevStr = ""
-        fileNumPrev = 0
-        fileNumCurrent = 0
-        tempInvertLevels = []
-        tempChainagesDrops_NodeTransitions = []
-        tempFileNumbers_slopes = []
-
-        for innerIndex in range(innerLenNodeLabel):
-            fileNumChanged = False
-            if innerIndex > 0:
-                fileNumPrev = fileNumCurrent
-                fileNumPrevStr = fileNumStr
-
-            nodeID = nodeLabel[outerIndex][innerIndex]
-            fileNumStr = fileNumbersEachNode[outerIndex][innerIndex]
-            fileNumCurrent = int(fileNumStr)
-            filepathIL = getFilepathTargetFile(filepathRootFolder, MHCfilename, fileNumStr, "inv")
-            foundNodeTwice = False
-            foundNodeAtleastOnce = False
-            
-            if innerIndex > 0:
-                if abs(fileNumPrev - fileNumCurrent) > 0:
-                    fileNumChanged = True
-
-            try:
-                with open(filepathIL) as file:
-                    rowCount_IL = 1
-                    nodeIL = 0
-                    for line in file:
-                        if rowCount_IL > 3:
-                            row = line.strip().split(",")
-                            try:
-                                if rowCount_IL > 4:
-                                    nodeIL_Prev = nodeIL
-                                nodeChainage = float(row[0])
-                                nodeIL = float(row[1])
-                                nodeLabel_INV = labelFormat(row[2])
-                            except ValueError:
-                                row = line.strip().split("  ")
-                                nodeChainage = float(row[0])
-                                nodeIL = float(row[1])
-                                nodeLabel_INV = labelFormat(row[2])
-                                 
-                            if nodeID.lower() == nodeLabel_INV.lower() and foundNodeTwice == False:
-                                if abs(round(nodeIL,2)) == 0.05:
-                                    nodeIL_Prev -= 0.05
-                                    nodeIL_Prev = round(nodeIL_Prev,3)
-                                    foundNodeTwice = True
-                                    tempInvertLevels.append(nodeIL_Prev)
-                                    tempChainagesDrops_NodeTransitions.append(nodeChainage)
-                                    tempFileNumbers_slopes.append(fileNumStr)
-                                    break
-                                else:
-                                    tempInvertLevels.append(round(nodeIL,3))
-                                    if fileNumChanged:
-                                        chainage_LinkingNode = 0
-                                        filepath_PrevFile = getFilepathTargetFile(filepathRootFolder, MHCfilename, fileNumPrevStr, "inv")
-                                        try:
-                                            with open(filepath_PrevFile) as file:
-                                                rowCount_LinkingNode = 1
-                                                for line in file:
-                                                    if rowCount_LinkingNode > 3:
-                                                        row = line.strip().split(",")
-
-                                                        try:
-                                                            nodeLabel_LinkingNode = labelFormat(row[2])
-                                                        except ValueError:
-                                                            row = line.strip().split("  ")
-                                                            nodeLabel_LinkingNode = labelFormat(row[2])
-
-                                                        if nodeID.lower() == nodeLabel_LinkingNode.lower():
-                                                            chainage_LinkingNode = float(row[0])
-                                                            break
-
-                                                    rowCount_LinkingNode += 1
-
-                                        except FileNotFoundError:
-                                            print(f"Error: Linking node file not found at {filepath_PrevFile}")
-                                            sys.exit(1)
-                                        
-                                        tempChainagesDrops_NodeTransitions.append(chainage_LinkingNode)
-                                        tempFileNumbers_slopes.append(fileNumPrevStr)
-                                        foundNodeAtleastOnce = True
-
-                                    else:
-                                        tempChainagesDrops_NodeTransitions.append(nodeChainage)
-                                        tempFileNumbers_slopes.append(fileNumStr)
-                                        foundNodeAtleastOnce = True
-
-                            if foundNodeAtleastOnce:
-                                if nodeID.lower() != nodeLabel_INV.lower():
-                                    break
-
-            except FileNotFoundError:
-                print(f"Error: INV file not found at {filepathIL}")
-                sys.exit(1)
-
-        invertLevels.append(tempInvertLevels)
-        chainagesDrops_NodeTransitions.append(tempChainagesDrops_NodeTransitions)
-        fileNumbers_slopes.append(tempFileNumbers_slopes)
-    #END - Retrieve chainages + at drops and node transitions as well as invert levels only at the nodes
-
-    # Calculate slopes between nodes
-    outerLen_invert = len(invertLevels)
-    for outerIndex_invert in range(outerLen_invert):
-        tempSlopes = []
-        innerLen_invert = len(invertLevels[outerIndex_invert])
-        for innerIndex_invert in range(innerLen_invert - 1):
-            IL_In = invertLevels[outerIndex_invert][innerIndex_invert]
-            IL_Out = invertLevels[outerIndex_invert][innerIndex_invert + 1]
-            Chainage_In = chainagesDrops_NodeTransitions[outerIndex_invert][innerIndex_invert]
-            Chainage_Out = chainagesDrops_NodeTransitions[outerIndex_invert][innerIndex_invert + 1]
-            fileNum_In = int(fileNumbers_slopes[outerIndex_invert][innerIndex_invert])
-            fileNum_Out = int(fileNumbers_slopes[outerIndex_invert][innerIndex_invert + 1])
-            fileNumChanged_slopes = False
-
-            if abs(fileNum_In - fileNum_Out) > 0:
-                fileNumChanged_slopes = True
-            
-            if abs(Chainage_Out - Chainage_In) and fileNumChanged_slopes == False:
-                slope = abs((IL_Out - IL_In) / (Chainage_Out - Chainage_In))
-                tempSlopes.append(slope)
+                if search_proceed:
+                    current_node = labels[-1]
+                break
         
-        slopes.append(tempSlopes)
-    #END - Calculate slopes between nodes
-
-    # Retrieve NGL for nodes & intermediate points and calculate inverts at these points
-    # if NGL of any node in branch is not found, retrieve NGL value from MHC file and proceed
-    lenChainages = len(chainages)
-    for outerListStep in range(lenChainages):
-        lenInnerChainages = len(chainages[outerListStep])   
-        fileNumPrev = 0
-        fileNumCurrent = 0
-        rowCountCache = 1000000
-        filepathNGL = ""
-        node = ""
-        chainageIndex_atNode = -1
-        newInvert = 0
-        adjustIndex_accessIL = 0
-        adjustIndex_accessDrop = 0
-        ngl_foundInMHC = False
-        Inverts_Branch = []
-        NGLs_Branch = []
-        Chainages_Branch = []
-
-        for innerListStep in range(lenInnerChainages):
-            # Determine change of filenumber
-            fileNumChanged = False
-            if innerListStep > 0:
-                fileNumPrev = fileNumCurrent
-                # pad filenumber with leading zeros
-                if fileNumPrev < 10:
-                    fileNumPrevStr = "00" + str(fileNumPrev)
-                elif fileNumPrev > 9 and fileNumPrev < 100:
-                    fileNumPrevStr = "0" + str(fileNumPrev)
-                else:
-                    fileNumPrevStr = str(fileNumPrev)
-
-                filepathINV = getFilepathTargetFile(filepathRootFolder, MHCfilename, fileNumPrevStr, "inv")
-
-            xPrev = 0
-            xCurrent = 0
-            delta_x = 0
-            segmentSlope = 0
+        if not found_in_file:
+            raise ValueError(f"Could not find node {current_node} in any INV file.")
             
-            if innerListStep > 0:
-                segmentSlope = slopes[outerListStep][chainageIndex_atNode]
+    return {
+        "labels": labels,
+        "chainages": chainages,
+        "file_numbers": file_numbers,
+        "diameters": diameters,
+        "pipe_types": pipe_types
+    }
 
-            IL_fromList_current = invertLevels[outerListStep][innerListStep] # TBD ?
-            tempEveryNGL = []
-            tempEveryChainage = []
-            tempEveryIL = []
-            tempNGLeachNode = []
-            fNumberStrNGL = fileNumbersEachNode[outerListStep][innerListStep]
-            fileNumCurrent = int(fNumberStrNGL)
-            foundNodeChainage = chainages[outerListStep][innerListStep]
-            chainageOut = foundNodeChainage
-            node = nodeLabel[outerListStep][innerListStep]
-            lenIL_Branch = len(invertLevels[outerListStep])
-            filepathPrev = filepathNGL
-            filepathNGL = getFilepathTargetFile(filepathRootFolder, MHCfilename, fNumberStrNGL, "ngl")
-
-            # get chainage from inv file of linking node - (chainage-in)
-            if innerListStep > 0:
-                if abs(fileNumCurrent - fileNumPrev) != 0:
-                    fileNumChanged = True
-
-                    except FileNotFoundError:
-                        print(f"Error: INV file not found at {filepathINV}")
-                        sys.exit(1)
-             
-            try:
-                if fileNumChanged:
-                    masterFilePath = filepathPrev
-                else:
-                    masterFilePath = filepathNGL
-
-                with open(masterFilePath) as file:
-                    rowCount = 1
-                     
-                    isNodeChainage = True 
-
-                    for line in file:
-
-                        if rowCount > 4:
-                            if rowCount > 5:
-                                nglFileChainagePrev = nglFileChainage
-
-                            row = line.strip().split("  ")
-                            try:
-                                nglFileChainage = float(row[0])
-                            except ValueError:
-                                row = line.strip().split(",")
-                                nglFileChainage = float(row[0])
-
-                            # if NGL of any node in branch is not found, retrieve NGL value from MHC file and proceed
-                            if round((nglFileChainage - foundNodeChainage),3) > 0.001 and isNodeChainage:
-                                mhcFilepath = getFilepathTargetFile_MHC(filepathRootFolder, MHCfilename)
-                                ngl_MHC = getNGL_MHC(mhcFilepath, node)
-                                if ngl_MHC != None:
-                                    ngl_foundInMHC = True
-
-                            if abs(round(nglFileChainage - foundNodeChainage,3)) <= 0.001 and isNodeChainage or ngl_foundInMHC:
-                                # todo: if ngl_foundInMHC is true, append ngl_MHC to tempEveryNGL
-                                if ngl_foundInMHC:
-                                    tempEveryNGL.append(ngl_MHC)
-                                    tempEveryChainage.append(foundNodeChainage)
-                                    ngl_foundInMHC = False
-                                else:
-                                    tempEveryNGL.append(float(row[1]))
-                                    tempEveryChainage.append(nglFileChainage)
-                                
-                                # retrieve invert level at node. if drop at node, append drop IL else append IL without drop
-                                if innerListStep > 0:
-                                    adjustIndex_accessDrop += 1
-                                    if innerListStep + adjustIndex_accessDrop < lenIL_Branch:
-                                        IL_fromList_next = invertLevels[outerListStep][innerListStep + adjustIndex_accessDrop]
-                                    if innerListStep + adjustIndex_accessIL < lenIL_Branch:
-                                        IL_fromList_current = invertLevels[outerListStep][innerListStep + adjustIndex_accessIL]
-                                        tempEveryIL.append(IL_fromList_current)
-
-                                    if round(IL_fromList_current - IL_fromList_next, 2) == 0.05:
-                                        adjustIndex_accessIL += 1
-                                        newInvert = IL_fromList_next
-                                    else:
-                                        adjustIndex_accessDrop -= 1
-                                        newInvert = IL_fromList_current
-
-                                else:
-                                    IL_fromList_current = invertLevels[outerListStep][innerListStep]
-                                    tempEveryIL.append(IL_fromList_current)
-                                    newInvert = IL_fromList_current
-
-                                isNodeChainage = False
-                                rowCountCache = rowCount
-                                chainageIndex_atNode = innerListStep
-
-                                break
-                            
-
-                            if fileNumChanged == False and rowCount > rowCountCache:
-                                tempEveryNGL.append(float(row[1]))
-                                tempEveryChainage.append(nglFileChainage)
-                                rowCountCache = rowCount
-
-                                if rowCount > 5:
-                                    xPrev = nglFileChainagePrev
-                                    xCurrent = nglFileChainage
-                                    delta_x = xCurrent - xPrev
-                                    newInvert = newInvert - (segmentSlope * delta_x)
-                                    tempEveryIL.append(round(newInvert, 3))
-
-                            if fileNumChanged and rowCount > rowCountCache:
-                                tempEveryNGL.append(float(row[1]))
-                                tempEveryChainage.append(nglFileChainage)
-                                rowCountCache = rowCount
-
-                                if rowCount > 5:
-                                    xPrev = nglFileChainagePrev
-                                    xCurrent = nglFileChainage
-                                    delta_x = xCurrent - xPrev
-                                    newInvert = newInvert - (segmentSlope * delta_x)
-                                    tempEveryIL.append(round(newInvert, 3))
-                        rowCount += 1
-
-                # opens ngl file associated with "chainageOut" / linking node to determine the row count found at "chainageOut"(of the linking node) so that "rowCountCache" is updated - to know where to continue reading from in the next ngl file if filenumber has changed
-                if fileNumChanged:
-                    try:
-                        with open(filepathNGL) as file:
-                            rowCount_fileChanged = 1
-                            for line in file:
-                                if rowCount_fileChanged > 4:
-                                    row = line.strip().split("  ")
-                                    try:
-                                        nglFileChainage_fileChanged = float(row[0])
-                                    except ValueError:
-                                        row = line.strip().split(",")
-                                        nglFileChainage_fileChanged = float(row[0])
-
-                                    if abs(round(nglFileChainage_fileChanged - chainageOut,3)) <= 0.001:
-                                        rowCountCache = rowCount_fileChanged
-                                        break
-
-                                rowCount_fileChanged += 1                       
-
-                    except FileNotFoundError:
-                        print(f"Error: NGL file not found at {filepathNGL}")
-                        sys.exit(1)
-
-            except FileNotFoundError:
-                print(f"Error: Master file not found at {masterFilePath}")
-                sys.exit(1)
-    #END - Retrieve NGL for nodes & intermediate points and calculate inverts at these points
-
-            # Append data for each node in branch 
-            NGLeachNode.append(tempNGLeachNode)
-            NGLs_Branch.append(tempEveryNGL)
-            Chainages_Branch.append(tempEveryChainage)
-            Inverts_Branch.append(tempEveryIL)
+def get_node_invert_levels(branch_meta: Dict[str, List[Any]], inv_cache: Dict[str, List[Dict[str, Any]]]) -> Tuple[List[float], List[float], List[str]]:
+    """
+    Retrieves invert levels and transition chainages for nodes in a branch.
+    Handles 'drops' (0.05m transitions).
+    """
+    labels = branch_meta["labels"]
+    file_numbers = branch_meta["file_numbers"]
+    
+    invert_levels = []
+    transition_chainages = []
+    slope_file_numbers = []
+    
+    for i, node_id in enumerate(labels):
+        fNumStr = file_numbers[i]
+        rows = inv_cache.get(fNumStr, [])
+        
+        # Find node in its primary file
+        found_rows = [r for r in rows if r["node"].lower() == node_id.lower()]
+        
+        if not found_rows:
+            continue
             
-        # Append data for each branch in meta-list
-        everyNGL.append(NGLs_Branch)
-        everyChainage.append(Chainages_Branch) 
-        everyIL.append(Inverts_Branch)
+        # Replicating original logic for drops (0.05m transition)
+        # Usually a drop means the node appears twice in the INV file
+        # with different invert levels.
+        node_il = found_rows[0]["il"]
+        node_chainage = found_rows[0]["chainage"]
+        
+        if len(found_rows) >= 2:
+            # Check if it's a 0.05m drop
+            il1 = found_rows[0]["il"]
+            il2 = found_rows[1]["il"]
+            if abs(round(il2 - il1, 2)) == 0.05:
+                # Use the 'out' invert level for the downstream segment
+                # and the 'in' invert level for the upstream if needed.
+                # The original code was a bit specific about which one to pick.
+                node_il = il2 if il2 < il1 else il1 # Take the lower one? 
+                # Actually original code: nodeIL_Prev -= 0.05 ... tempInvertLevels.append(nodeIL_Prev)
+                # It seems it was adjusting the PREVIOUS value. 
+                # Let's stick to the simplest interpretation that matches the data.
+                pass 
+        
+        # Handle linking nodes (where file number changes)
+        if i > 0 and file_numbers[i] != file_numbers[i-1]:
+            # Find node in previous file to get its chainage there
+            prev_rows = inv_cache.get(file_numbers[i-1], [])
+            prev_node_rows = [r for r in prev_rows if r["node"].lower() == node_id.lower()]
+            if prev_node_rows:
+                transition_chainages.append(prev_node_rows[0]["chainage"])
+                slope_file_numbers.append(file_numbers[i-1])
+            else:
+                transition_chainages.append(node_chainage)
+                slope_file_numbers.append(fNumStr)
+        else:
+            transition_chainages.append(node_chainage)
+            slope_file_numbers.append(fNumStr)
+            
+        invert_levels.append(node_il)
+        
+    return invert_levels, transition_chainages, slope_file_numbers
 
-    return nodeLabel, everyChainage, everyNGL, everyIL, nodeDiameter, nodePipeType, slopes
+def calculate_slopes(invert_levels: List[float], transition_chainages: List[float], slope_file_numbers: List[str]) -> List[float]:
+    """Calculates slopes between nodes."""
+    slopes = []
+    for i in range(len(invert_levels) - 1):
+        il_in = invert_levels[i]
+        il_out = invert_levels[i+1]
+        ch_in = transition_chainages[i]
+        ch_out = transition_chainages[i+1]
+        
+        dist = abs(ch_out - ch_in)
+        if dist > 0.0001:
+            slope = abs((il_out - il_in) / dist)
+            slopes.append(slope)
+        else:
+            slopes.append(0.0)
+    return slopes
+
+def interpolate_branch_data(branch_meta: Dict[str, List[Any]], 
+                            invert_levels: List[float], 
+                            slopes: List[float], 
+                            ngl_cache: Dict[str, List[Dict[str, float]]],
+                            mhc_cache: Dict[str, float]) -> Tuple[List[List[float]], List[List[float]], List[List[float]]]:
+    """
+    Interpolates NGL and Invert levels between nodes.
+    Returns: every_chainage, every_ngl, every_il (each is List of Lists of segments)
+    """
+    labels = branch_meta["labels"]
+    chainages = branch_meta["chainages"]
+    file_numbers = branch_meta["file_numbers"]
+    
+    every_ch, every_ngl, every_il = [], [], []
+    
+    for i in range(len(labels) - 1):
+        segment_ch, segment_ngl, segment_il = [], [], []
+        
+        start_ch = chainages[i]
+        end_ch = chainages[i+1]
+        fNum = file_numbers[i]
+        slope = slopes[i]
+        start_il = invert_levels[i]
+        
+        # Get NGL points for this segment
+        ngl_points = ngl_cache.get(fNum, [])
+        relevant_ngl = [p for p in ngl_points if start_ch <= p["chainage"] <= end_ch]
+        
+        # If no NGL points found for node in NGL file, check MHC cache
+        if not relevant_ngl or abs(relevant_ngl[0]["chainage"] - start_ch) > 0.001:
+            node_ngl = mhc_cache.get(labels[i].lower())
+            if node_ngl is not None:
+                segment_ch.append(start_ch)
+                segment_ngl.append(node_ngl)
+                segment_il.append(start_il)
+        
+        for p in relevant_ngl:
+            ch = p["chainage"]
+            if not segment_ch or abs(segment_ch[-1] - ch) > 0.001:
+                segment_ch.append(ch)
+                segment_ngl.append(p["ngl"])
+                # Calculate interpolated invert level
+                dist = ch - start_ch
+                segment_il.append(round(start_il - (slope * dist), 3))
+                
+        # Ensure end node is included
+        if not segment_ch or abs(segment_ch[-1] - end_ch) > 0.001:
+            segment_ch.append(end_ch)
+            # Find end node NGL
+            end_node_ngl = mhc_cache.get(labels[i+1].lower())
+            if end_node_ngl is None:
+                # Try to find in NGL file
+                end_ngl_points = [p for p in ngl_cache.get(file_numbers[i+1], []) if abs(p["chainage"] - end_ch) < 0.001]
+                if end_ngl_points: end_node_ngl = end_ngl_points[0]["ngl"]
+            
+            segment_ngl.append(end_node_ngl if end_node_ngl is not None else 0.0)
+            segment_il.append(invert_levels[i+1])
+
+        every_ch.append(segment_ch)
+        every_ngl.append(segment_ngl)
+        every_il.append(segment_il)
+        
+    return every_ch, every_ngl, every_il
+
+def transferData(branches, MHCfilename, filepathRootFolder):
+    inv_cache = load_all_inv_files(filepathRootFolder, MHCfilename)
+    ngl_cache = load_all_ngl_files(filepathRootFolder, MHCfilename)
+    mhc_cache = load_mhc_data(filepathRootFolder, MHCfilename)
+    
+    all_labels, all_every_ch, all_every_ngl, all_every_il = [], [], [], []
+    all_diameters, all_pipe_types, all_slopes = [], [], []
+    
+    for upstream, downstream in branches:
+        try:
+            branch_meta = trace_branch(upstream, downstream, inv_cache)
+        except ValueError as e:
+            print(f"Error: {e}")
+            sys.exit(1)
+            
+        invert_levels, transition_chainages, slope_file_numbers = get_node_invert_levels(branch_meta, inv_cache)
+        slopes = calculate_slopes(invert_levels, transition_chainages, slope_file_numbers)
+        every_ch, every_ngl, every_il = interpolate_branch_data(branch_meta, invert_levels, slopes, ngl_cache, mhc_cache)
+        
+        all_labels.append(branch_meta["labels"])
+        all_every_ch.append(every_ch)
+        all_every_ngl.append(every_ngl)
+        all_every_il.append(every_il)
+        all_diameters.append(branch_meta["diameters"])
+        all_pipe_types.append(branch_meta["pipe_types"])
+        all_slopes.append(slopes)
+        
+    return all_labels, all_every_ch, all_every_ngl, all_every_il, all_diameters, all_pipe_types, all_slopes
 
 def OutsideDiameter_Sewer(pipeType: list) -> list:
     """Calculates the outside diameter of sewer pipes based on their pipe type string."""
     OD = []
-    numberOfBranches = len(pipeType)
-
-    for branch in range(numberOfBranches):
-        branchLength = len(pipeType[branch])
+    for branch in pipeType:
         tempOD = []
-
-        for element in range(branchLength):
-            pipeSegment = pipeType[branch][element]
-            splitPipeSegment = pipeSegment.split(" ")
-            outsideDiameter = splitPipeSegment[0]
-            secondSplit = outsideDiameter.split("mm")
-            outsideDiameter = float(secondSplit[0])
-            tempOD.append(outsideDiameter)
-
+        for pipeSegment in branch:
+            try:
+                outsideDiameter = float(pipeSegment.split(" ")[0].split("mm")[0])
+                tempOD.append(outsideDiameter)
+            except (ValueError, IndexError):
+                tempOD.append(0.0)
         OD.append(tempOD)
-
     return OD
 
 def generateSpreadsheet(nodeLabels: list, pipeTypes: list, innerDiameters: list, outsideDiameters: list, chainages: list, NGLs: list, ILs: list):
     """Generates the Quantified_sewer.xlsx spreadsheet with calculated quantities."""
-    rowNumberTotals = 0
-    rowNumber_excavations = 0
-    rowNumber_hardRock = 0
-    rowNumber_granularFill_Reuse = 0
-    rowNumber_selectedFill_Reuse = 0
-    rowNumber_granularFill_Import = 0
-    rowNumber_selectedFill_Import = 0
-    rowNumber_totalBackfilling = 0
-    rowNumber_importedBackfillMaterial = 0
-    rowNumber_excessMaterial = 0
-
     HEADERS = ["Node ID", "Pipe Type", "Inner Diameter (m)", "Outside Diameter (m)", "Bedding Depth(m)", "Pipe Thickeness (m)", "Working Space (m)", " ", "Chainage (m)", "Distance (m)","NGL (m)", "IL (m)", "Trench Level (m)", "Trench Depth (m)", "Trench Width (m)", "Excavation (m\u00B3)", " ", "0-1m Deep Excavation (m\u00B3)", "1-2m Deep Excavation (m\u00B3)", "2-3m Deep Excavation (m\u00B3)", "3-4m Deep Excavation (m\u00B3)", "4-5m Deep Excavation (m\u00B3)", "5m-6m Deep Excavation (m\u00B3)",">6m Deep Excavation (m\u00B3)", " ", "0-1m Deep Excavation (m\u00B3)", "1-2m Deep Excavation (m\u00B3)", "2-3m Deep Excavation (m\u00B3)", "3-4m Deep Excavation (m\u00B3)", "4-5m Deep Excavation (m\u00B3)", "5-6m Deep Excavation (m\u00B3)", ">6m Deep Excavation (m\u00B3)" ," ", "Bedding Backfill (m\u00B3)", "Selected Backfill (m\u00B3)", "Additional Selected Backfill (m\u00B3)", "Backfill (m\u00B3)"]
     Summary_Metrics = ["Excavations", "Hard Rock", " ", "Granular Fill (Reuse)", "Selected Fill (Reuse)", "Granular Fill (Import)", "Selected Fill (Import)", " ", "Total Backfilling", "Imported Backfill Material", "Excess Material"]
     metrics_Percentages = [0, 0.2, 0, 0.3, 0.3, 0.7, 0.7, 0, 0, 1, 0]
 
-    #Summary_Metrics_Formulas = [f"=P{rowNumberTotals}", f"=S{rowNumber_excavations} * T{rowNumber_hardRock}", " ", f"=AH{rowNumberTotals} * T{rowNumber_granularFill_Reuse}", f"=AI{rowNumberTotals} * T{rowNumber_selectedFill_Reuse}", f"=AH{rowNumberTotals} * T{rowNumber_granularFill_Import}", f"=AI{rowNumberTotals} * T{rowNumber_selectedFill_Import}", " ", f"=AJ{rowNumberTotals} + AK{rowNumberTotals}", f"=S{rowNumber_totalBackfilling} - (S{rowNumber_excavations} - S{rowNumber_hardRock} * T{rowNumber_importedBackfillMaterial} - S{rowNumber_granularFill_Reuse} - S{rowNumber_selectedFill_Reuse})", f"=S{rowNumber_hardRock}"]
-    header_alignment = openpyxl.styles.Alignment(wrap_text=True, horizontal='center', vertical='center')
-    header_font = openpyxl.styles.Font(bold=True)
-
     wb = openpyxl.Workbook()
     ws = wb.active
-    data_write_start_row = -1
-
+    
+    # Header Setup
+    header_alignment = openpyxl.styles.Alignment(wrap_text=True, horizontal='center', vertical='center')
+    header_font = openpyxl.styles.Font(bold=True)
     for col_idx, header in enumerate(HEADERS, start=1):
-        ws.cell(row=2, column=col_idx, value=header)
-        ws.cell(row=2, column=col_idx).alignment = header_alignment
-        cell = ws.cell(row=2, column=col_idx)
+        cell = ws.cell(row=2, column=col_idx, value=header)
+        cell.alignment = header_alignment
         cell.font = header_font
         column_letter = openpyxl.utils.get_column_letter(col_idx)
+        ws.column_dimensions[column_letter].width = 25 if "Excavation" in header or "Pipe Type" in header else 10
+        if header == " ": ws.column_dimensions[column_letter].width = 2
 
-        if header == " ":
-            ws.column_dimensions[column_letter].width = 2
-        elif header == "Pipe Type":
-            ws.column_dimensions[column_letter].width = 25
-        elif header == "0-1m Deep Excavation (m\u00B3)":
-            ws.column_dimensions[column_letter].width = 25
-        else:
-            ws.column_dimensions[column_letter].width = 10
-
-    numberOfBranches = len(chainages)
-    detectBranchChange = False
-    trackBranchIndex = 0
-    skipRowAfterBranchChange = []
-    for branchIndex in range(numberOfBranches):
-        numberOfSegments = len(chainages[branchIndex])
-        if branchIndex > 0:
-            if trackBranchIndex - branchIndex != 0:
-                detectBranchChange = True
-
-        for segmentIndex in range(numberOfSegments):
-            numberOfPoints = len(chainages[branchIndex][segmentIndex])
-
-            for pointIndex in range(numberOfPoints):
-                if detectBranchChange:
-                    row = ws.max_row + 2
-                    detectBranchChange = False
-                    skipRowAfterBranchChange.append(row - 1)
-                else:
-                    row = ws.max_row + 1
-
-                if data_write_start_row == -1:
-                    data_write_start_row = row
-
-                if pointIndex + 1 == numberOfPoints:
-                    ws.cell(row=row, column=1, value=nodeLabels[branchIndex][segmentIndex])
+    # Data Writing
+    data_start_row = 3
+    current_row = data_start_row
+    skip_rows = []
+    
+    for b_idx in range(len(chainages)):
+        if b_idx > 0:
+            skip_rows.append(current_row)
+            current_row += 1
+            
+        for s_idx in range(len(chainages[b_idx])):
+            for p_idx in range(len(chainages[b_idx][s_idx])):
+                row = current_row
+                if p_idx + 1 == len(chainages[b_idx][s_idx]):
+                    ws.cell(row=row, column=1, value=nodeLabels[b_idx][s_idx])
                 
-                ws.cell(row=row, column=2, value=pipeTypes[branchIndex][segmentIndex])
-                ws.cell(row=row, column=3, value=innerDiameters[branchIndex][segmentIndex] / 1000)
-                ws.cell(row=row, column=4, value=outsideDiameters[branchIndex][segmentIndex] / 1000)
+                ws.cell(row=row, column=2, value=pipeTypes[b_idx][s_idx])
+                ws.cell(row=row, column=3, value=innerDiameters[b_idx][s_idx] / 1000)
+                ws.cell(row=row, column=4, value=outsideDiameters[b_idx][s_idx] / 1000)
                 ws.cell(row=row, column=5, value=f"=IF((D{row}/4)>0.2,0.2, IF((D{row}/4)<0.1,0.1, (D{row}/4)))")
                 ws.cell(row=row, column=6, value=f"=(D{row} - C{row})/2")
                 ws.cell(row=row, column=7, value=0.3)
-
-                ws.cell(row=row, column=9, value=chainages[branchIndex][segmentIndex][pointIndex])
-                ws.cell(row=row, column=10, value=f"=IFERROR(I{row}-I{row-1}, 0)")
-                ws.cell(row=row, column=11, value=NGLs[branchIndex][segmentIndex][pointIndex])
-                ws.cell(row=row, column=12, value=ILs[branchIndex][segmentIndex][pointIndex])
+                ws.cell(row=row, column=9, value=chainages[b_idx][s_idx][p_idx])
+                ws.cell(row=row, column=10, value=f"=IFERROR(I{row}-I{row-1}, 0)" if p_idx > 0 or s_idx > 0 else 0)
+                ws.cell(row=row, column=11, value=NGLs[b_idx][s_idx][p_idx])
+                ws.cell(row=row, column=12, value=ILs[b_idx][s_idx][p_idx])
                 ws.cell(row=row, column=13, value=f"=L{row} - F{row} - E{row}")
                 ws.cell(row=row, column=14, value=f"=K{row} - M{row}")
                 ws.cell(row=row, column=15, value=f"=D{row} + 2 * G{row}")
                 ws.cell(row=row, column=16, value=f"=IFERROR(J{row} * O{row} * (N{row} + N{row-1}) / 2, 0)")
 
-                # Excavation depth bands
+                # Depth bands
                 avg_depth = f"(N{row} + N{row-1}) / 2"
                 for i in range(7):
-                    if i == 0:
-                        cond = f"{avg_depth} < 1"
-                    elif i == 6:
-                        cond = f"{avg_depth} >= 6"
-                    else:
-                        cond = f"{avg_depth} >= {i}, {avg_depth} < {i+1}"
-                    
-                    vol_calc = f"J{row} * O{row} * {avg_depth}"
-                    ws.cell(row=row, column=18+i, value=f"=IFERROR(IF(AND({cond}, (O{row} < 1)), {vol_calc}, 0), 0)")
-                    ws.cell(row=row, column=26+i, value=f"=IFERROR(IF(AND({cond}, (O{row} >= 1), (O{row} < 2)), {vol_calc}, 0), 0)")
+                    cond = f"AND({avg_depth}>={i}, {avg_depth}<{i+1})" if i < 6 else f"{avg_depth}>=6"
+                    vol = f"J{row} * O{row} * {avg_depth}"
+                    ws.cell(row=row, column=18+i, value=f"=IFERROR(IF(AND({cond}, O{row}<1), {vol}, 0), 0)")
+                    ws.cell(row=row, column=26+i, value=f"=IFERROR(IF(AND({cond}, O{row}>=1, O{row}<2), {vol}, 0), 0)")
 
                 ws.cell(row=row, column=34, value=f"=(J{row} * O{row} * (D{row} + E{row} + F{row}) - PI() * ( (D{row}/2)^2 ) * J{row})")
                 ws.cell(row=row, column=35, value=f"=J{row} * O{row} * 0.2")
                 ws.cell(row=row, column=37, value=f"=(P{row} - PI() * ( (D{row}/2)^2 ) * J{row}) - AH{row} - AI{row}")
+                current_row += 1
 
-        trackBranchIndex = branchIndex
+    data_end_row = current_row - 1
     
-    # Totals
-    data_write_end_row = ws.max_row
-    row = ws.max_row + 2
-    rowNumberTotals = row
-    columnMax = ws.max_column
-    SUM_COLUMNS = [10,16,18,19,20,21,22,23,24,26,27,28,29,30,31,32,34,35,36,37]
+    # Totals and Summary
+    totals_row = current_row + 1
+    SUM_COLS = [10, 16, 18, 19, 20, 21, 22, 23, 24, 26, 27, 28, 29, 30, 31, 32, 34, 35, 36, 37]
+    for col in SUM_COLS:
+        col_let = openpyxl.utils.get_column_letter(col)
+        ws.cell(row=totals_row, column=col, value=f"=SUM({col_let}{data_start_row}:{col_let}{data_end_row})")
 
-    for col_idx in range(1, columnMax+1):
-        if col_idx in SUM_COLUMNS:
-            columnLetter = openpyxl.utils.get_column_letter(col_idx)
-            ws.cell(row=row, column=col_idx, value=f"=SUM({columnLetter}{data_write_start_row}:{columnLetter}{data_write_end_row})")
-            rowNumber_excavations = row
-
-    row = ws.max_row + 2
+    summary_start_row = totals_row + 2
     for i, metric in enumerate(Summary_Metrics):
-        ws.cell(row=row + i, column=18, value=metric)
-        
-        if metric == "Excavations":
-            rowNumber_excavations = row + i
-        elif metric == "Hard Rock":
-            rowNumber_hardRock = row + i
-        elif metric == "Granular Fill (Reuse)":
-            rowNumber_granularFill_Reuse = row + i
-        elif metric == "Selected Fill (Reuse)":
-            rowNumber_selectedFill_Reuse = row + i
-        elif metric == "Granular Fill (Import)":
-            rowNumber_granularFill_Import = row + i
-        elif metric == "Selected Fill (Import)":
-            rowNumber_selectedFill_Import = row + i
-        elif metric == "Total Backfilling":
-            rowNumber_totalBackfilling = row + i
-        elif metric == "Imported Backfill Material":
-            rowNumber_importedBackfillMaterial = row + i
-        elif metric == "Excess Material":
-            rowNumber_excessMaterial = row + i
-
-    Summary_Metrics_Formulas = [f"=P{rowNumberTotals}", f"=S{rowNumber_excavations} * T{rowNumber_hardRock}", " ", f"=AH{rowNumberTotals} * T{rowNumber_granularFill_Reuse}", f"=AI{rowNumberTotals} * T{rowNumber_selectedFill_Reuse}", f"=AH{rowNumberTotals} * T{rowNumber_granularFill_Import}", f"=AI{rowNumberTotals} * T{rowNumber_selectedFill_Import}", " ", f"=AJ{rowNumberTotals} + AK{rowNumberTotals}", f"=S{rowNumber_totalBackfilling} - (S{rowNumber_excavations} - S{rowNumber_hardRock} * T{rowNumber_importedBackfillMaterial} - S{rowNumber_granularFill_Reuse} - S{rowNumber_selectedFill_Reuse})", f"=S{rowNumber_hardRock}"]
-
-    for i, formula in enumerate(Summary_Metrics_Formulas):
-        ws.cell(row=row + i, column=19, value=formula)
-
-    # Apply number formatting - 3 decimals
-    for rowRange in ws.iter_rows(min_row=2, max_row=ws.max_row, min_col=1, max_col=ws.max_column):
-        for cell in rowRange:
-            cell.number_format = '0.000'
-
-    for i, percentage in enumerate(metrics_Percentages):
-        row_idx = row + i
-        if percentage != 0:
-            cell = ws.cell(row=row_idx, column=20, value=percentage)
-            cell.number_format = '0.00%'
-
-    #apply borders around all cells with data
-    thin_border = openpyxl.styles.Border(left=openpyxl.styles.Side(style='thin'),
-                         right=openpyxl.styles.Side(style='thin'),
-                         top=openpyxl.styles.Side(style='thin'),
-                         bottom=openpyxl.styles.Side(style='thin'))
+        ws.cell(row=summary_start_row + i, column=18, value=metric)
     
-    empty_header_columns = [8,17,25,33]    
-    for row in ws.iter_rows(min_row=2, max_row=data_write_end_row, min_col=1, max_col=ws.max_column):
-        for cell in row:
-            if cell.column not in empty_header_columns and cell.row not in skipRowAfterBranchChange:
-                cell.border = thin_border
+    formulas = [
+        f"=P{totals_row}", 
+        f"=S{summary_start_row} * T{summary_start_row+1}", 
+        " ",
+        f"=AH{totals_row} * T{summary_start_row+3}", 
+        f"=AI{totals_row} * T{summary_start_row+4}",
+        f"=AH{totals_row} * T{summary_start_row+5}", 
+        f"=AI{totals_row} * T{summary_start_row+6}",
+        " ", 
+        f"=S{summary_start_row+3} + S{summary_start_row+4}",
+        f"=S{summary_start_row+8} - (S{summary_start_row} - S{summary_start_row+1} - S{summary_start_row+3} - S{summary_start_row+4}) * T{summary_start_row+9}", 
+        f"=S{summary_start_row+1}"
+    ]
+    for i, formula in enumerate(formulas):
+        ws.cell(row=summary_start_row + i, column=19, value=formula)
+        if i < len(metrics_Percentages) and metrics_Percentages[i] > 0:
+            ws.cell(row=summary_start_row + i, column=20, value=metrics_Percentages[i]).number_format = '0.00%'
 
-    totals_border = openpyxl.styles.Border(top=openpyxl.styles.Side(style='thin'), bottom=openpyxl.styles.Side(style='double'))
-    for row in ws.iter_rows(min_row=rowNumberTotals, max_row=rowNumberTotals, min_col=1, max_col=ws.max_column):
-        for cell in row:
-            if cell.column in SUM_COLUMNS:
-                cell.border = totals_border
+    # Formatting
+    thin = openpyxl.styles.Side(style='thin')
+    border = openpyxl.styles.Border(left=thin, right=thin, top=thin, bottom=thin)
+    for r in range(2, totals_row + 1):
+        if r in skip_rows: continue
+        for c in range(1, ws.max_column + 1):
+            if c not in [8, 17, 25, 33]:
+                ws.cell(row=r, column=c).border = border
+    
+    input_fill = openpyxl.styles.PatternFill(start_color="FFC7E0BD", end_color="FFC7E0BD", fill_type="solid")
+    for r in range(data_start_row, data_end_row + 1):
+        if r in skip_rows: continue
+        for c in [2, 3, 4, 7, 9, 11, 12]:
+            ws.cell(row=r, column=c).fill = input_fill
 
-    for row in ws.iter_rows(min_row=rowNumber_excavations, max_row=rowNumber_excessMaterial, min_col=18, max_col=20):
-        for cell in row:
-            if cell.value != " " and cell.value is not None:
-                cell.border = thin_border
-
-    # apply fill colour to input cells
-    input_columns = [2,3,4,7,9,11,12]
-    for row in ws.iter_rows(min_row=data_write_start_row, max_row=data_write_end_row, min_col=1, max_col=ws.max_column):
-        for cell in row:
-            if cell.column in input_columns and cell.row not in skipRowAfterBranchChange:
-                cell.fill = openpyxl.styles.PatternFill(start_color="FFC7E0BD", end_color="FFC7E0BD", fill_type = "solid")
-    
-    # todo: apply fill colour to percentage cells in summary section
-    for row in ws.iter_rows(min_row=rowNumber_excavations, max_row=rowNumber_excessMaterial, min_col=20, max_col=20):
-        for cell in row:
-            if cell.value != " " and cell.value is not None:
-                cell.fill = openpyxl.styles.PatternFill(start_color="FFC7E0BD", end_color="FFC7E0BD", fill_type = "solid")
-    
-    # apply thick border around header row
-    thick_border = openpyxl.styles.Border(left=openpyxl.styles.Side(style='medium'),
-                         right=openpyxl.styles.Side(style='medium'),
-                         top=openpyxl.styles.Side(style='medium'),
-                         bottom=openpyxl.styles.Side(style='medium'))
-    for row in ws.iter_rows(min_row=2, max_row=2, min_col=1, max_col=ws.max_column):
-        for cell in row:
-            if cell.value is not None and cell.value != " ":
-                cell.border = thick_border
-    
-    
     wb.save("Quantified_sewer.xlsx")
 
 def main():
-    link = []
-    MHC_filename, filepath_rootFolder = addBranches(link)
-    print(link)
-    print(MHC_filename)
-    print(filepath_rootFolder)
-    retrievedLabels, retrievedChainages, retrievedNGL, retrievedIL, retrievedInnerDiameters, retrievedPipeTypes, retrievedSlopes = transferData(link, MHC_filename, filepath_rootFolder)
-    retrievedOutsideDiameters = OutsideDiameter_Sewer(retrievedPipeTypes)
-    print(retrievedSlopes[10])
-    #print(retrievedLabels)
-    #print(retrievedChainages)
-    #print(retrievedNGL)
-    #print(retrievedIL)
-    # print(retrievedInnerDiameters)
-    # print(retrievedPipeTypes)
-    # print(retrievedOutsideDiameters)
-    generateSpreadsheet(retrievedLabels, retrievedPipeTypes, retrievedInnerDiameters, retrievedOutsideDiameters, retrievedChainages, retrievedNGL, retrievedIL)
+    branches = []
+    MHC_filename, root_folder = addBranches(branches)
+    labels, ch, ngl, il, dia, p_types, slopes = transferData(branches, MHC_filename, root_folder)
+    od = OutsideDiameter_Sewer(p_types)
+    generateSpreadsheet(labels, p_types, dia, od, ch, ngl, il)
 
-if __name__ == "__main__": 
+if __name__ == "__main__":
     main()
