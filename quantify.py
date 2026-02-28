@@ -2,26 +2,31 @@ import openpyxl
 import os
 import sys
 
-def getMHCfilename():
+def getMHCfilename() -> str:
+    """Prompts the user for the MHC filename and returns it in lowercase."""
     filename = input("Enter MHC filename: ")
     return filename.lower()
 
 # Get filepath to folder containing model files
-def getFilepathRootFolder():
+def getFilepathRootFolder() -> str:
+    """Prompts the user for the root directory of the model files."""
     filepath = input("Enter filepath to MHC file: ")
     return filepath
 
 # filepath to target file inside folder
 import os
 
-def getFilepathTargetFile(filePathRootFolder, filename, fileNumber, extension):
+def getFilepathTargetFile(filePathRootFolder: str, filename: str, fileNumber: str, extension: str) -> str:
+    """Constructs a cross-platform path for a specific data file."""
     return os.path.join(filePathRootFolder, f"{filename}{fileNumber}.{extension.upper()}")
 
-def getFilepathTargetFile_MHC(filePathRootFolder, filename, extension  = "mhc"):
+def getFilepathTargetFile_MHC(filePathRootFolder: str, filename: str, extension: str = "mhc") -> str:
+    """Constructs a cross-platform path for the MHC data file."""
     return os.path.join(filePathRootFolder, f"{filename}.{extension.upper()}")
 
-def getNumBranches(filepathRootFolder,MHCfilename):
-    BranchFilePath = getFilepathTargetFile(filepathRootFolder, MHCfilename,"", "brn")
+def getNumBranches(filepathRootFolder: str, MHCfilename: str) -> int:
+    """Reads the BRN file to determine the total number of branches in the network."""
+    BranchFilePath = getFilepathTargetFile(filepathRootFolder, MHCfilename, "", "brn")
     try:
         with open(BranchFilePath) as file:
             lines = file.readlines()
@@ -34,11 +39,13 @@ def getNumBranches(filepathRootFolder,MHCfilename):
     return 0
 
 # Removes quotation mark or whitespace from node-label inside inv file
-def labelFormat(label):
+def labelFormat(label: str) -> str:
+    """Cleans up manhole labels by removing quotes and extra spaces."""
     return label.strip(' "')
 
 # adds new branches to meta-list
-def addBranches(metaList):
+def addBranches(metaList: list) -> tuple[str, str]:
+    """Interactively allows the user to build a list of branches to quantify."""
     MHCfilename = getMHCfilename()
     filepathRootFolder = getFilepathRootFolder()
 
