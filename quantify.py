@@ -1,5 +1,6 @@
 import openpyxl
 import os
+import sys
 
 def getMHCfilename():
     filename = input("Enter MHC filename: ")
@@ -98,10 +99,9 @@ def addBranches(metaList):
 
                             rowCount += 1
 
-                        metaList.append(tempBranch_modelled)
                 except FileNotFoundError:
-                    print("File Not Found")
-                    break
+                    print(f"Error: INV file not found at {filepath_inv}")
+                    sys.exit(1)
 
         if choice and decision == 3:
 
@@ -163,6 +163,7 @@ def getNGL_MHC(filepath, node):
 
     except FileNotFoundError:
         print(f"Error opening MHC file at: {filepath}")
+        return None
 
 # Removes quotation marks from pipe type if any but keeps whitespace between words
 def pipeTypeFormat(pipeType):
@@ -322,8 +323,8 @@ def transferData(branches,MHCfilename,filepathRootFolder):
                             fileNumber += 1
                         
                 except FileNotFoundError:
-                    print("File Not Found")
-                    break
+                    print(f"Error: INV file not found at {filepath}")
+                    sys.exit(1)
     #END - Retrieve Node labels, chainages, inner diameter and pipe type for each branch from INV files
 
         nodeLabel.append(tempNodeLabel)
@@ -422,8 +423,8 @@ def transferData(branches,MHCfilename,filepathRootFolder):
                                                     rowCount_LinkingNode += 1
 
                                         except FileNotFoundError:
-                                            print("File Not Found")
-                                            break
+                                            print(f"Error: Linking node file not found at {filepath_PrevFile}")
+                                            sys.exit(1)
                                         
                                         tempChainagesDrops_NodeTransitions.append(chainage_LinkingNode)
                                         tempFileNumbers_slopes.append(fileNumPrevStr)
@@ -438,10 +439,9 @@ def transferData(branches,MHCfilename,filepathRootFolder):
                                 if nodeID.lower() != nodeLabel_INV.lower():
                                     break
 
-                        rowCount_IL += 1
-                                                    
             except FileNotFoundError:
-                print("File Not Found")
+                print(f"Error: INV file not found at {filepathIL}")
+                sys.exit(1)
 
         invertLevels.append(tempInvertLevels)
         chainagesDrops_NodeTransitions.append(tempChainagesDrops_NodeTransitions)
@@ -533,29 +533,9 @@ def transferData(branches,MHCfilename,filepathRootFolder):
                 if abs(fileNumCurrent - fileNumPrev) != 0:
                     fileNumChanged = True
 
-                    try:
-                        with open(filepathINV) as file:
-                            rowCountINV = 1
-                            
-                            for line in file:
-                                
-                                if rowCountINV > 3:
-                                    row = line.strip().split(",")
-                                    try:
-                                        nodeINVFile = labelFormat(row[2])
-                                    except ValueError:
-                                        row = line.strip().split("  ")
-                                        nodeINVFile = labelFormat(row[2])
-
-                                    if nodeINVFile.lower() == node.lower():
-                                        foundNodeChainage = float(row[0])
-                                        break
-
-                                rowCountINV += 1
-
                     except FileNotFoundError:
-                        print("File Not Found")
-                        break
+                        print(f"Error: INV file not found at {filepathINV}")
+                        sys.exit(1)
              
             try:
                 if fileNumChanged:
@@ -672,12 +652,12 @@ def transferData(branches,MHCfilename,filepathRootFolder):
                                 rowCount_fileChanged += 1                       
 
                     except FileNotFoundError:
-                        print("File Not Found")
-                        break
+                        print(f"Error: NGL file not found at {filepathNGL}")
+                        sys.exit(1)
 
             except FileNotFoundError:
-                print("File Not Found")
-                break
+                print(f"Error: Master file not found at {masterFilePath}")
+                sys.exit(1)
     #END - Retrieve NGL for nodes & intermediate points and calculate inverts at these points
 
             # Append data for each node in branch 
