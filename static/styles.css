@@ -274,19 +274,75 @@ main {
     border: 1px solid rgba(66, 153, 225, 0.2);
 }
 
-/* Spinner */
+/* Drop Zone Styles */
+.drop-zone {
+    width: 100%;
+    height: 150px;
+    padding: 25px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    text-align: center;
+    cursor: pointer;
+    background-color: #0b1320;
+    border: 2px dashed #2d3748;
+    border-radius: 12px;
+    transition: border-color 0.2s ease, background-color 0.2s ease;
+}
+
+.drop-zone:hover, .drop-zone--over {
+    border-color: #26C6DA;
+    background-color: rgba(38, 198, 218, 0.05);
+}
+
+.drop-zone-prompt {
+    color: #a0aec0;
+    font-weight: 600;
+    font-size: 0.9rem;
+}
+
+.drop-zone-input {
+    display: none;
+}
+
+.file-list {
+    margin-top: 1rem;
+    max-height: 150px;
+    overflow-y: auto;
+    width: 100%;
+    display: flex;
+    flex-direction: column;
+    gap: 0.5rem;
+}
+
+.file-item {
+    background-color: rgba(255, 255, 255, 0.05);
+    padding: 0.5rem 1rem;
+    border-radius: 8px;
+    font-size: 0.8rem;
+    color: #e0e6ed;
+    border: 1px solid rgba(255, 255, 255, 0.1);
+}
+
+.download-link {
+    color: #68d391;
+    text-decoration: underline;
+    cursor: pointer;
+}
+
+/* Spinner for processing */
 .spinner {
-    border: 2px solid rgba(11, 19, 32, 0.3);
-    border-radius: 50%;
-    border-top: 2px solid #0b1320;
+    display: inline-block;
     width: 16px;
     height: 16px;
-    animation: spin 1s linear infinite;
+    border: 2px solid rgba(255,255,255,.3);
+    border-radius: 50%;
+    border-top-color: #fff;
+    animation: spin 1s ease-in-out infinite;
 }
 
 @keyframes spin {
-    0% { transform: rotate(0deg); }
-    100% { transform: rotate(360deg); }
+    to { transform: rotate(360deg); }
 }
 
 /* Footer */

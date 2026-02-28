@@ -10,15 +10,12 @@
 <body>
 
     <div class="app-container">
-        <!-- Main Logo Header -->
         <header>
             <h1 class="logo">Quantify</h1>
         </header>
 
-        <!-- Dynamic Content Area -->
         <main id="main-content">
             
-            <!-- Screen 1: Dashboard -->
             <div id="screen-dashboard" class="screen active">
                 <div class="card" onclick="selectNetwork('Sewer')">
                     <div class="card-icon">
@@ -41,12 +38,9 @@
                 </div>
             </div>
 
-            <!-- Screen 2: Network Options -->
             <div id="screen-options" class="screen">
                 <h2 id="options-title" class="screen-title">Sewer Options</h2>
-                
                 <div class="options-container">
-                    <!-- Modelled Network -->
                     <div class="card option-card" onclick="openInputForm('modelled')">
                         <div class="card-icon option-icon">
                             <svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="10" y="3" width="4" height="4"></rect><rect x="3" y="17" width="4" height="4"></rect><rect x="17" y="17" width="4" height="4"></rect><line x1="12" y1="7" x2="12" y2="12"></line><line x1="5" y1="12" x2="19" y2="12"></line><line x1="5" y1="12" x2="5" y2="17"></line><line x1="19" y1="12" x2="19" y2="17"></line></svg>
@@ -54,8 +48,6 @@
                         <h3>Modelled Network</h3>
                         <p>Tap to view metrics</p>
                     </div>
-
-                    <!-- Customize Network -->
                     <div class="card option-card" onclick="openInputForm('customize')">
                         <div class="card-icon option-icon">
                             <svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="6" cy="6" r="3"></circle><circle cx="6" cy="18" r="3"></circle><line x1="20" y1="4" x2="8.12" y2="15.88"></line><line x1="14.47" y1="14.48" x2="20" y2="20"></line><line x1="8.12" y1="8.12" x2="12" y2="12"></line></svg>
@@ -64,25 +56,27 @@
                         <p>Tap to view metrics</p>
                     </div>
                 </div>
-
                 <button class="back-btn" onclick="showScreen('screen-dashboard')">
                     <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="19" y1="12" x2="5" y2="12"></line><polyline points="12 19 5 12 12 5"></polyline></svg>
                     Back to Dashboard
                 </button>
             </div>
 
-            <!-- Screen 3: Input Form -->
             <div id="screen-input" class="screen">
                 <h2 id="input-title" class="screen-title">Setup Quantification</h2>
-                
                 <div class="form-container">
+                    
                     <div class="input-group">
-                        <label>Root Folder Path</label>
-                        <input type="text" id="root-folder" placeholder="e.g. C:\Projects\Model Files">
+                        <label>Attach Model Files (.inv, .ngl, .mhc, .brn or .zip)</label>
+                        <div class="drop-zone" id="drop-zone">
+                            <span class="drop-zone-prompt">Drop files here or click to upload</span>
+                            <input type="file" name="files" id="file-input" class="drop-zone-input" multiple>
+                        </div>
+                        <div id="file-list" class="file-list"></div>
                     </div>
                     
                     <div class="input-group">
-                        <label>MHC Filename</label>
+                        <label>Base MHC Filename</label>
                         <input type="text" id="mhc-filename" placeholder="e.g. Asbuilt - Sewer">
                     </div>
 
@@ -102,7 +96,6 @@
 
         </main>
 
-        <!-- Footer -->
         <footer>
             <p>&copy; 2026 Quantify Systems.</p>
         </footer>
@@ -111,6 +104,50 @@
     <script>
         let currentNetwork = 'Sewer';
         let currentMode = 'modelled';
+        let selectedFiles = [];
+
+        // File Drop Zone Logic
+        const dropZone = document.getElementById('drop-zone');
+        const fileInput = document.getElementById('file-input');
+        const fileList = document.getElementById('file-list');
+
+        dropZone.addEventListener('click', () => fileInput.click());
+
+        fileInput.addEventListener('change', (e) => {
+            handleFiles(e.target.files);
+        });
+
+        dropZone.addEventListener('dragover', (e) => {
+            e.preventDefault();
+            dropZone.classList.add('drop-zone--over');
+        });
+
+        ['dragleave', 'dragend'].forEach(type => {
+            dropZone.addEventListener(type, () => {
+                dropZone.classList.remove('drop-zone--over');
+            });
+        });
+
+        dropZone.addEventListener('drop', (e) => {
+            e.preventDefault();
+            dropZone.classList.remove('drop-zone--over');
+            handleFiles(e.dataTransfer.files);
+        });
+
+        function handleFiles(files) {
+            selectedFiles = Array.from(files);
+            fileList.innerHTML = '';
+            selectedFiles.forEach(file => {
+                const item = document.createElement('div');
+                item.className = 'file-item';
+                item.textContent = file.name;
+                fileList.appendChild(item);
+            });
+            
+            if (selectedFiles.length > 0) {
+                document.querySelector('.drop-zone-prompt').textContent = `${selectedFiles.length} files selected`;
+            }
+        }
 
         function showScreen(screenId) {
             document.querySelectorAll('.screen').forEach(s => s.classList.remove('active'));
@@ -123,63 +160,57 @@
             currentNetwork = networkType;
             const title = document.getElementById('options-title');
             title.textContent = networkType + " Options";
-            
-            // Apply color coding based on network
             if (networkType === 'Sewer') {
-                title.style.color = '#FFA726'; // Orange
+                title.style.color = '#FFA726';
             } else {
-                title.style.color = '#26C6DA'; // Cyan
+                title.style.color = '#26C6DA';
             }
-            
             showScreen('screen-options');
         }
 
         function openInputForm(mode) {
             currentMode = mode;
-            if (mode === 'customize') {
-                document.getElementById('custom-branch-group').style.display = 'block';
-            } else {
-                document.getElementById('custom-branch-group').style.display = 'none';
-            }
+            document.getElementById('custom-branch-group').style.display = mode === 'customize' ? 'block' : 'none';
             showScreen('screen-input');
         }
 
         async function runQuantify() {
-            const rootFolder = document.getElementById('root-folder').value;
             const mhcFilename = document.getElementById('mhc-filename').value;
             const customBranch = document.getElementById('custom-branch').value;
             const statusDiv = document.getElementById('status-message');
             const runBtn = document.getElementById('run-btn');
 
-            if (!rootFolder || !mhcFilename) {
-                statusDiv.textContent = "Please fill in all required fields.";
+            if (selectedFiles.length === 0 || !mhcFilename) {
+                statusDiv.textContent = "Please attach files and enter the MHC filename.";
                 statusDiv.className = 'status-msg error';
                 return;
             }
 
-            // UI Loading state
             runBtn.disabled = true;
             runBtn.innerHTML = `<span class="spinner"></span> Processing...`;
-            statusDiv.textContent = "Analyzing network files and generating spreadsheet...";
+            statusDiv.textContent = "Uploading files and processing network...";
             statusDiv.className = 'status-msg info';
+
+            const formData = new FormData();
+            formData.append('network_type', currentNetwork);
+            formData.append('mode', currentMode);
+            formData.append('mhc_filename', mhcFilename);
+            if (customBranch) formData.append('custom_branch', customBranch);
+            
+            selectedFiles.forEach(file => {
+                formData.append('files', file);
+            });
 
             try {
                 const response = await fetch('/api/quantify', {
                     method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({
-                        network_type: currentNetwork,
-                        mode: currentMode,
-                        mhc_filename: mhcFilename,
-                        root_folder: rootFolder,
-                        custom_branch: currentMode === 'customize' ? customBranch : null
-                    })
+                    body: formData
                 });
 
                 const data = await response.json();
                 
                 if (response.ok) {
-                    statusDiv.textContent = `Success! ${data.message}`;
+                    statusDiv.innerHTML = `Success! <a href="${data.file_url}" class="download-link" download>Download ${currentNetwork} Spreadsheet</a>`;
                     statusDiv.className = 'status-msg success';
                 } else {
                     statusDiv.textContent = `Error: ${data.detail}`;
