@@ -139,151 +139,124 @@ def getNGL_MHC(filepath, node):
 def pipeTypeFormat(pipeType):
     return pipeType.strip(' "')
 
+def load_all_inv_files(filepathRootFolder, MHCfilename):
+    """Loads all INV files into memory to avoid repeated disk I/O."""
+    inv_cache = {}
+    totalBranches = getNumBranches(filepathRootFolder, MHCfilename)
+    for branch_idx in range(1, totalBranches + 1):
+        fNumStr = f"{branch_idx:03d}"
+        filepath = getFilepathTargetFile(filepathRootFolder, MHCfilename, fNumStr, "inv")
+        try:
+            with open(filepath) as f:
+                lines = f.readlines()[3:] # Skip 3 lines header
+                data = []
+                for line in lines:
+                    if not line.strip(): continue
+                    row = line.strip().split(",")
+                    if len(row) < 7: # Some rows might be differently formatted
+                        row = line.strip().split("  ")
+                    if len(row) >= 7:
+                        data.append({
+                            "chainage": float(row[0]),
+                            "il": float(row[1]),
+                            "node": labelFormat(row[2]),
+                            "dia": float(row[3]),
+                            "pipe_type": pipeTypeFormat(row[6])
+                        })
+                inv_cache[fNumStr] = data
+        except FileNotFoundError:
+            continue
+    return inv_cache
+
 # Retrieve data e.g) ".INV"  for a given list of branches
-def transferData(branches,MHCfilename,filepathRootFolder):
-    #MHCfilename = getMHCfilename()
+def transferData(branches, MHCfilename, filepathRootFolder):
+    inv_cache = load_all_inv_files(filepathRootFolder, MHCfilename)
     numberOfBranches = len(branches)
     nodeLabel = []
     nodeDiameter = []
     nodePipeType = []
-    fileNumbersFound = [] # tracking list of filenumbers found as nodes for custom branch are being found 
-    fileNumbersEachNode = [] # list of filenumber assoiciated with any node found for every branch
-    adjustedfileNumbersFound = [] # list of non-repeating filenumbers from 'fileNumbersEachNode' list
-    fileNumbers_slopes = [] 
+    fileNumbersFound = [] 
+    fileNumbersEachNode = [] 
     chainages = []
     chainagesDrops_NodeTransitions = []
     invertLevels = []
     slopes = []
     NGLeachNode = []
-    everyNGL = [] # to contain ngl values such that each branch(longsection) is stored in a separate list from the rest of the branches and that each branch contains a list of ngl values retrieved from upstream node to downstream node
+    everyNGL = [] 
     everyChainage = []
     everyIL = []
-    #filepathRootFolder = getFilepathRootFolder()
 
-    # todo: flag to indicate if node is not found in any inv file - to avoid infinite loop
-    # Retrieve Node labels, chainages, inner diameter and pipe type for each branch from INV files
-    for branch in range(numberOfBranches):
-
-        upstreamNode = branches[branch][0]
-        downstreamNode = branches[branch][1]
+    # Retrieve Node labels, chainages, inner diameter and pipe type for each branch
+    for branch_idx in range(numberOfBranches):
+        upstreamNode = branches[branch_idx][0]
+        downstreamNode = branches[branch_idx][1]
+        
         tempNodeLabel = []
         tempNodeChainages = []
         tempNodeFilenumbers = []
         tempNodeDiameter = []
         tempNodePipeType = []
-               
-        proceed = True
-        fileNumber = 1
-        skipFileNumber = 0
-        nodeID = ""
-        upstreamNodeFound = False
         
-        while (proceed): 
-                
-                if upstreamNodeFound:
-                    if fileNumber == skipFileNumber:
-                        fileNumber += 1
-
-                if fileNumber < 10:  
-                    fNumberStr = "00" + str(fileNumber)
-                else:
-                    fNumberStr = "0" + str(fileNumber)
-
-                filepath = getFilepathTargetFile(filepathRootFolder, MHCfilename, fNumberStr, "inv")
-                
-                try:
-                    
-                    with open(filepath) as file:
-                        rowCount = 1
-                        upstreamNodeFound = False
-            
-                        for line in file:
-                            
-                            if rowCount > 3:
-                                row = line.strip().split(",")
-                                try:
-                                    nodeID = labelFormat(row[2])
-                                    innerDia = float(row[3])
-                                    pipeType = pipeTypeFormat(row[6])
-                                except ValueError:
-                                    row = line.strip().split("  ")
-                                    nodeID = labelFormat(row[2])
-                                    innerDia = float(row[3])
-                                    pipeType = pipeTypeFormat(row[6])
-
-                                if nodeID.lower() == upstreamNode.lower():
-                                    upstreamNodeFound = True
-                                    skipFileNumber = fileNumber
-                                    fileNumbersFound.append(fNumberStr)
-                                
-                                # resolves duplication of data (drop manholes) found from model files 
-                                if upstreamNodeFound and proceed:
-                                    if len(tempNodeLabel) == 0:
-                                        tempNodeLabel.append(nodeID)
-                                        tempNodeChainages.append(float(row[0]))
-                                        tempNodeFilenumbers.append(fNumberStr)
-                                        tempNodeDiameter.append(innerDia)
-                                        tempNodePipeType.append(pipeType)
-
-                                    else:
-                                        # resolve duplication of node labels found
-                                        lastNodeLabelAppended = tempNodeLabel[-1]
-                                        if lastNodeLabelAppended.lower() == nodeID.lower():
-                                            tempNodeLabel[-1] = nodeID
-                                            tempNodeChainages[-1] = float(row[0])
-                                            tempNodeFilenumbers[-1] = fNumberStr
-
-                                            if len(tempNodeDiameter) == 0:
-                                                tempNodeDiameter.append(innerDia)
-                                                tempNodePipeType.append(pipeType)
-                                            else:
-                                                tempNodeDiameter[-1] = innerDia
-                                                tempNodePipeType[-1] = pipeType
-
-                                        else:
-                                            tempNodeLabel.append(nodeID)
-                                            tempNodeChainages.append(float(row[0]))
-                                            tempNodeFilenumbers.append(fNumberStr)
-                                            tempNodeDiameter.append(innerDia)
-                                            tempNodePipeType.append(pipeType)
-
-                                # if the last node in the branch is found
-                                if nodeID.lower() == downstreamNode.lower() and upstreamNodeFound:
-                                    lastNodeLabelAppended = tempNodeLabel[-1]
-                                    if lastNodeLabelAppended.lower() == nodeID.lower():
-                                        tempNodeLabel[-1] = nodeID
-                                        tempNodeChainages[-1] = float(row[0])
-                                        tempNodeFilenumbers[-1] = fNumberStr
-
-                                        if len(tempNodeDiameter) == 0:
-                                            tempNodeDiameter.append(innerDia)
-                                            tempNodePipeType.append(pipeType)
-                                        else:
-                                            tempNodeDiameter[-1] = innerDia
-                                            tempNodePipeType[-1] = pipeType
-
-                                    else:
-                                        tempNodeLabel.append(nodeID)
-                                        tempNodeChainages.append(float(row[0]))
-                                        tempNodeFilenumbers.append(fNumberStr)
-                                        tempNodeDiameter.append(innerDia)
-                                        tempNodePipeType.append(pipeType)
+        found_entire_branch = False
+        current_node = upstreamNode
         
-                                    proceed = False
-
-                            rowCount += 1
-
-                        # updates the "upstream node" to the next node in the branch
-                        if upstreamNodeFound and proceed:
-                            upstreamNode = nodeID
-                            fileNumber = 1
-                        else:
-                            fileNumber += 1
+        # Search for the branch through all files in cache
+        # This is a bit complex because a branch can span multiple files
+        # We start from any file that contains the current_node and follow it until downstreamNode
+        
+        search_proceed = True
+        while search_proceed:
+            node_found_in_any_file = False
+            for fNumStr, rows in inv_cache.items():
+                # Find current_node in this file
+                start_idx = -1
+                for idx, row in enumerate(rows):
+                    if row["node"].lower() == current_node.lower():
+                        start_idx = idx
+                        node_found_in_any_file = True
+                        break
+                
+                if start_idx != -1:
+                    # Collect nodes from here until end of file or until downstreamNode
+                    for idx in range(start_idx, len(rows)):
+                        row = rows[idx]
+                        nodeID = row["node"]
                         
-                except FileNotFoundError:
-                    print(f"Error: INV file not found at {filepath}")
-                    sys.exit(1)
-    #END - Retrieve Node labels, chainages, inner diameter and pipe type for each branch from INV files
+                        # Add node if not duplicate of last added
+                        if not tempNodeLabel or tempNodeLabel[-1].lower() != nodeID.lower():
+                            tempNodeLabel.append(nodeID)
+                            tempNodeChainages.append(row["chainage"])
+                            tempNodeFilenumbers.append(fNumStr)
+                            tempNodeDiameter.append(row["dia"])
+                            tempNodePipeType.append(row["pipe_type"])
+                        else:
+                            # Update existing node data if it's the same node (e.g. drop)
+                            tempNodeChainages[-1] = row["chainage"]
+                            tempNodeFilenumbers[-1] = fNumStr
+                            tempNodeDiameter[-1] = row["dia"]
+                            tempNodePipeType[-1] = row["pipe_type"]
+                        
+                        if nodeID.lower() == downstreamNode.lower():
+                            search_proceed = False
+                            found_entire_branch = True
+                            break
+                    
+                    if search_proceed:
+                        # Move to the next node in the chain for the next file search
+                        current_node = tempNodeLabel[-1]
+                    break # Found the node in a file, move to next step or next file
+            
+            if not node_found_in_any_file:
+                print(f"Error: Could not find node {current_node} in any INV file.")
+                sys.exit(1)
+
+        nodeLabel.append(tempNodeLabel)
+        chainages.append(tempNodeChainages)
+        nodeDiameter.append(tempNodeDiameter)
+        nodePipeType.append(tempNodePipeType)
+        fileNumbersEachNode.append(tempNodeFilenumbers)
+
+    # END - Retrieve Node labels, chainages, inner diameter and pipe type for each branch from INV files
 
         nodeLabel.append(tempNodeLabel)
         chainages.append(tempNodeChainages)
