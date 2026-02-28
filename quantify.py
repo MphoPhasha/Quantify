@@ -84,56 +84,31 @@ def addBranches(metaList):
 
     return MHCfilename, filepathRootFolder
 
-def getNGL_MHC(filepath, node):
-    mhc_node = ""
+def load_mhc_data(filepathRootFolder, MHCfilename):
+    """Loads MHC node ground levels into memory."""
+    mhc_cache = {}
+    filepath = getFilepathTargetFile_MHC(filepathRootFolder, MHCfilename)
     try:
         with open(filepath) as file:
-            rowCountMHC = 1
-            for line in file:
-                if rowCountMHC > 13:
-                    row = line.strip().split(",")
+            lines = file.readlines()
+            # Node data typically starts after line 13
+            for line in lines[13:]:
+                if not line.strip(): continue
+                row = line.strip().split(",")
+                if len(row) > 0:
+                    node_id = labelFormat(row[0])
+                    # NGL is in column 4 (index 3) based on inspection
                     try:
-                        mhc_node = labelFormat(row[0])
-                    except IndexError:
-                        print("Error: row not delimited by comma in MHC file")
-
-                    row = line.strip()
-                    columnCount = 1
-                    trackReached = 0
-                    reachedNewColumn = False
-                    endOfNodeLabel = False
-                    nglString = ""
-                    for char in row:
-                        
-                        if not endOfNodeLabel:
-                            if char == ",":
-                                endOfNodeLabel = True
-
-                        if endOfNodeLabel and char != ",":
-                            if char != " ":
-                                if trackReached == 1:
-                                    reachedNewColumn = False
-                                else:
-                                    reachedNewColumn = True
-                                trackReached = 1
-                            else:
-                                trackReached = 0
-
-                        if reachedNewColumn:
-                            columnCount += 1
-                            reachedNewColumn = False
-                        
-                        if columnCount == 4:
-                            nglString += char
-
-                rowCountMHC += 1
-
-                if mhc_node.lower() == node.lower():
-                    return float(nglString)
-
+                        ngl = float(row[3].split()[0]) # Handle potential trailing spaces
+                        mhc_cache[node_id.lower()] = ngl
+                    except (ValueError, IndexError):
+                        continue
     except FileNotFoundError:
         print(f"Error opening MHC file at: {filepath}")
-        return None
+    return mhc_cache
+
+def getNGL_MHC(mhc_cache, node):
+    return mhc_cache.get(node.lower())
 
 # Removes quotation marks from pipe type if any but keeps whitespace between words
 def pipeTypeFormat(pipeType):
