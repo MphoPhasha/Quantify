@@ -3,16 +3,6 @@ import os
 import sys
 from typing import List, Tuple, Dict, Any
 
-def getMHCfilename() -> str:
-    """Prompts the user for the MHC filename and returns it in lowercase."""
-    filename = input("Enter MHC filename: ")
-    return filename.lower()
-
-def getFilepathRootFolder() -> str:
-    """Prompts the user for the root directory of the model files."""
-    filepath = input("Enter filepath to MHC file: ")
-    return filepath
-
 def getFilepathTargetFile(filePathRootFolder: str, filename: str, fileNumber: str, extension: str) -> str:
     """Constructs a cross-platform path for a specific data file."""
     return os.path.join(filePathRootFolder, f"{filename}{fileNumber}.{extension.upper()}")
@@ -43,30 +33,66 @@ def pipeTypeFormat(pipeType: str) -> str:
     """Removes quotation marks from pipe type."""
     return pipeType.strip(' "')
 
-def addBranches(metaList: list) -> tuple[str, str]:
-    """Interactively allows the user to build a list of branches to quantify."""
-    MHCfilename = getMHCfilename()
-    filepathRootFolder = getFilepathRootFolder()
+def get_branches(root_folder: str, mhc_filename: str, mode: str, custom_branches: List[str] = None) -> List[str]:
+    """Returns a list of branch file numbers based on the selected mode."""
+    branches = []
+    if mode == "modelled":
+        total_branches = getNumBranches(root_folder, mhc_filename)
+        for branch_idx in range(1, total_branches + 1):
+            branches.append(f"{branch_idx:03d}")
+    elif mode == "customize" and custom_branches:
+        branches.extend(custom_branches)
+    return branches
 
+def run_quantification(network_type: str, mhc_filename: str, root_folder: str, mode: str, custom_branches: List[str] = None) -> str:
+    """
+    Entry point for UI/Programmatic execution.
+    Returns the path to the generated Excel file or raises an Exception.
+    """
+    branches = get_branches(root_folder, mhc_filename, mode, custom_branches)
+    if not branches:
+        raise ValueError("No branches selected or found to process.")
+        
+    labels, ch, ngl, il, dia, p_types, slopes = transferData(branches, mhc_filename, root_folder)
+    
+    if not labels:
+        raise ValueError("No data could be extracted from the specified model files.")
+        
+    od = OutsideDiameter_Sewer(p_types)
+    output_filename = f"Quantified_{network_type.lower()}.xlsx"
+    generateSpreadsheet(labels, p_types, dia, od, ch, ngl, il, output_filename)
+    return output_filename
+
+def cli_main():
+    """Terminal-based interactive CLI."""
+    filename = input("Enter MHC filename: ").lower()
+    filepath = input("Enter filepath to MHC file: ")
+    
+    branches = []
     while True:
         print("\nQuantify\n1.Finish\n2.Modelled Network\n3.Customize Network")
-        userInput = input("Enter: ")
+        user_input = input("Enter: ")
 
-        if userInput == "1":
+        if user_input == "1":
             break
-        elif userInput == "2":
-            totalBranches = getNumBranches(filepathRootFolder, MHCfilename)
-            for branch_idx in range(1, totalBranches + 1):
-                fNumStr = f"{branch_idx:03d}"
-                metaList.append(fNumStr)
+        elif user_input == "2":
+            branches = get_branches(filepath, filename, "modelled")
             break
-        elif userInput == "3":
-            fNum = input("Enter branch file number (e.g. 001): ").strip()
-            if fNum: metaList.append(fNum)
+        elif user_input == "3":
+            f_num = input("Enter branch file number (e.g. 001): ").strip()
+            if f_num: 
+                branches.extend(get_branches(filepath, filename, "customize", [f_num]))
         else:
             print("Invalid input. Please choose 1, 2, or 3.")
 
-    return MHCfilename, filepathRootFolder
+    if branches:
+        labels, ch, ngl, il, dia, p_types, slopes = transferData(branches, filename, filepath)
+        od = OutsideDiameter_Sewer(p_types)
+        generateSpreadsheet(labels, p_types, dia, od, ch, ngl, il, "Quantified_sewer.xlsx")
+        print("Quantification complete. File saved as Quantified_sewer.xlsx")
+    else:
+        print("No branches selected. Exiting.")
+
 
 def load_mhc_data(filepathRootFolder: str, MHCfilename: str) -> Dict[str, float]:
     """Loads MHC node ground levels into memory."""
@@ -271,9 +297,10 @@ def OutsideDiameter_Sewer(pipeType: list) -> list:
         OD.append(tempOD)
     return OD
 
-def generateSpreadsheet(nodeLabels: list, pipeTypes: list, innerDiameters: list, outsideDiameters: list, chainages: list, NGLs: list, ILs: list):
-    """Generates the Quantified_sewer.xlsx spreadsheet with calculated quantities."""
+def generateSpreadsheet(nodeLabels: list, pipeTypes: list, innerDiameters: list, outsideDiameters: list, chainages: list, NGLs: list, ILs: list, output_filename: str = "Quantified_sewer.xlsx"):
+    """Generates the quantified spreadsheet with calculated quantities."""
     HEADERS = ["Node ID", "Pipe Type", "Inner Diameter (m)", "Outside Diameter (m)", "Bedding Depth(m)", "Pipe Thickeness (m)", "Working Space (m)", " ", "Chainage (m)", "Distance (m)","NGL (m)", "IL (m)", "Trench Level (m)", "Trench Depth (m)", "Trench Width (m)", "Excavation (m\u00B3)", " ", "0-1m Deep Excavation (m\u00B3)", "1-2m Deep Excavation (m\u00B3)", "2-3m Deep Excavation (m\u00B3)", "3-4m Deep Excavation (m\u00B3)", "4-5m Deep Excavation (m\u00B3)", "5m-6m Deep Excavation (m\u00B3)",">6m Deep Excavation (m\u00B3)", " ", "0-1m Deep Excavation (m\u00B3)", "1-2m Deep Excavation (m\u00B3)", "2-3m Deep Excavation (m\u00B3)", "3-4m Deep Excavation (m\u00B3)", "4-5m Deep Excavation (m\u00B3)", "5-6m Deep Excavation (m\u00B3)", ">6m Deep Excavation (m\u00B3)" ," ", "Bedding Backfill (m\u00B3)", "Selected Backfill (m\u00B3)", "Additional Selected Backfill (m\u00B3)", "Backfill (m\u00B3)"]
+
     Summary_Metrics = ["Excavations", "Hard Rock", " ", "Granular Fill (Reuse)", "Selected Fill (Reuse)", "Granular Fill (Import)", "Selected Fill (Import)", " ", "Total Backfilling", "Imported Backfill Material", "Excess Material"]
     metrics_Percentages = [0, 0.2, 0, 0.3, 0.3, 0.7, 0.7, 0, 0, 1, 0]
 
@@ -378,14 +405,7 @@ def generateSpreadsheet(nodeLabels: list, pipeTypes: list, innerDiameters: list,
         for c in [2, 3, 4, 7, 9, 11, 12]:
             ws.cell(row=r, column=c).fill = input_fill
 
-    wb.save("Quantified_sewer.xlsx")
-
-def main():
-    branches = []
-    MHC_filename, root_folder = addBranches(branches)
-    labels, ch, ngl, il, dia, p_types, slopes = transferData(branches, MHC_filename, root_folder)
-    od = OutsideDiameter_Sewer(p_types)
-    generateSpreadsheet(labels, p_types, dia, od, ch, ngl, il)
+    wb.save(output_filename)
 
 if __name__ == "__main__":
-    main()
+    cli_main()
