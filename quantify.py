@@ -35,13 +35,7 @@ def getNumBranches(filepathRootFolder,MHCfilename):
 
 # Removes quotation mark or whitespace from node-label inside inv file
 def labelFormat(label):
-    node = ""
-    for char in label:
-        if char == '"' or char == ' ' :
-            node = node
-        else:
-            node += char
-    return node
+    return label.strip(' "')
 
 # adds new branches to meta-list
 def addBranches(metaList):
@@ -167,19 +161,7 @@ def getNGL_MHC(filepath, node):
 
 # Removes quotation marks from pipe type if any but keeps whitespace between words
 def pipeTypeFormat(pipeType):
-
-    formattedPipeType = ""
-    lastLeadingWhitespace = False
-
-    for char in pipeType:
-        if char == '"' and not lastLeadingWhitespace:
-            lastLeadingWhitespace = True
-
-        if lastLeadingWhitespace:
-            if char != '"':
-                formattedPipeType += char
-        
-    return formattedPipeType
+    return pipeType.strip(' "')
 
 # Retrieve data e.g) ".INV"  for a given list of branches
 def transferData(branches,MHCfilename,filepathRootFolder):
