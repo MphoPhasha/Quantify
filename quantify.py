@@ -250,28 +250,7 @@ def transferData(branches, MHCfilename, filepathRootFolder):
                 print(f"Error: Could not find node {current_node} in any INV file.")
                 sys.exit(1)
 
-        nodeLabel.append(tempNodeLabel)
-        chainages.append(tempNodeChainages)
-        nodeDiameter.append(tempNodeDiameter)
-        nodePipeType.append(tempNodePipeType)
-        fileNumbersEachNode.append(tempNodeFilenumbers)
-
     # END - Retrieve Node labels, chainages, inner diameter and pipe type for each branch from INV files
-
-        nodeLabel.append(tempNodeLabel)
-        chainages.append(tempNodeChainages)
-        nodeDiameter.append(tempNodeDiameter)
-        nodePipeType.append(tempNodePipeType)
-        fileNumbersEachNode.append(tempNodeFilenumbers)
-
-    lenFileNumbersFound = len(fileNumbersFound)
-    if lenFileNumbersFound > 0:
-        adjustedfileNumbersFound.append(fileNumbersFound[0])
-        # append unique filenumbers
-        for i in range(lenFileNumbersFound - 1):
-            if fileNumbersFound[i+1] != fileNumbersFound[i]:
-                adjustedfileNumbersFound.append(fileNumbersFound[i+1])
-    #END - Retrieve Node labels and chainages for each branch from INV files
    
     # Retrieve chainages & at drops, node transitions as well as invert levels only at the nodes
     outerLenNodeLabel= len(nodeLabel)
