@@ -150,6 +150,36 @@ def load_all_inv_files(filepathRootFolder, MHCfilename):
             continue
     return inv_cache
 
+def load_all_ngl_files(filepathRootFolder: str, MHCfilename: str) -> dict:
+    """Loads all NGL files into memory."""
+    ngl_cache = {}
+    totalBranches = getNumBranches(filepathRootFolder, MHCfilename)
+    for branch_idx in range(1, totalBranches + 1):
+        fNumStr = f"{branch_idx:03d}"
+        filepath = getFilepathTargetFile(filepathRootFolder, MHCfilename, fNumStr, "ngl")
+        try:
+            with open(filepath) as f:
+                lines = f.readlines()[4:] # Skip header
+                data = []
+                for line in lines:
+                    if not line.strip(): continue
+                    row = line.strip().split("  ")
+                    try:
+                        chainage = float(row[0])
+                        ngl = float(row[1])
+                    except (ValueError, IndexError):
+                        row = line.strip().split(",")
+                        try:
+                            chainage = float(row[0])
+                            ngl = float(row[1])
+                        except (ValueError, IndexError):
+                            continue
+                    data.append({"chainage": chainage, "ngl": ngl})
+                ngl_cache[fNumStr] = data
+        except FileNotFoundError:
+            continue
+    return ngl_cache
+
 # Retrieve data e.g) ".INV"  for a given list of branches
 def transferData(branches, MHCfilename, filepathRootFolder):
     inv_cache = load_all_inv_files(filepathRootFolder, MHCfilename)
@@ -565,8 +595,8 @@ def transferData(branches, MHCfilename, filepathRootFolder):
 
     return nodeLabel, everyChainage, everyNGL, everyIL, nodeDiameter, nodePipeType, slopes
 
-def OutsideDiameter_Sewer(pipeType):
-
+def OutsideDiameter_Sewer(pipeType: list) -> list:
+    """Calculates the outside diameter of sewer pipes based on their pipe type string."""
     OD = []
     numberOfBranches = len(pipeType)
 
@@ -586,7 +616,8 @@ def OutsideDiameter_Sewer(pipeType):
 
     return OD
 
-def generateSpreadsheet(nodeLabels, pipeTypes, innerDiameters, outsideDiameters, chainages, NGLs, ILs):
+def generateSpreadsheet(nodeLabels: list, pipeTypes: list, innerDiameters: list, outsideDiameters: list, chainages: list, NGLs: list, ILs: list):
+    """Generates the Quantified_sewer.xlsx spreadsheet with calculated quantities."""
     rowNumberTotals = 0
     rowNumber_excavations = 0
     rowNumber_hardRock = 0
