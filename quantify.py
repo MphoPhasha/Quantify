@@ -699,22 +699,20 @@ def generateSpreadsheet(nodeLabels: list, pipeTypes: list, innerDiameters: list,
                 ws.cell(row=row, column=14, value=f"=K{row} - M{row}")
                 ws.cell(row=row, column=15, value=f"=D{row} + 2 * G{row}")
                 ws.cell(row=row, column=16, value=f"=IFERROR(J{row} * O{row} * (N{row} + N{row-1}) / 2, 0)")
-                ws.cell(row=row, column=18, value=f"=IFERROR(IF(AND((N{row} + N{row-1}) / 2 < 1, (O{row} < 1)), J{row} * O{row} * (N{row} + N{row-1}) / 2, 0), 0)")
 
-                ws.cell(row=row, column=19, value=f"=IFERROR(IF(AND((N{row} + N{row-1}) / 2 >= 1, (N{row} + N{row-1}) / 2 < 2, (O{row} < 1)), J{row} * O{row} * (N{row} + N{row-1}) / 2, 0), 0)")
-                ws.cell(row=row, column=20, value=f"=IFERROR(IF(AND((N{row} + N{row-1}) / 2 >= 2, (N{row} + N{row-1}) / 2 < 3, (O{row} < 1)), J{row} * O{row} * (N{row} + N{row-1}) / 2, 0), 0)")
-                ws.cell(row=row, column=21, value=f"=IFERROR(IF(AND((N{row} + N{row-1}) / 2 >= 3, (N{row} + N{row-1}) / 2 < 4, (O{row} < 1)), J{row} * O{row} * (N{row} + N{row-1}) / 2, 0), 0)")
-                ws.cell(row=row, column=22, value=f"=IFERROR(IF(AND((N{row} + N{row-1}) / 2 >= 4, (N{row} + N{row-1}) / 2 < 5, (O{row} < 1)), J{row} * O{row} * (N{row} + N{row-1}) / 2, 0), 0)")
-                ws.cell(row=row, column=23, value=f"=IFERROR(IF(AND((N{row} + N{row-1}) / 2 >= 5, (N{row} + N{row-1}) / 2 < 6, (O{row} < 1)), J{row} * O{row} * (N{row} + N{row-1}) / 2, 0), 0)")
-                ws.cell(row=row, column=24, value=f"=IFERROR(IF(AND((N{row} + N{row-1}) / 2 >= 6, (O{row} < 1)), J{row} * O{row} * (N{row} + N{row-1}) / 2, 0), 0)")
-
-                ws.cell(row=row, column=26, value=f"=IFERROR(IF(AND((N{row} + N{row-1}) / 2 < 1, (O{row} >= 1), (O{row} < 2)), J{row} * O{row} * (N{row} + N{row-1}) / 2, 0), 0)")
-                ws.cell(row=row, column=27, value=f"=IFERROR(IF(AND((N{row} + N{row-1}) / 2 >= 1, (N{row} + N{row-1}) / 2 < 2, (O{row} >= 1), (O{row} < 2)), J{row} * O{row} * (N{row} + N{row-1}) / 2, 0), 0)")
-                ws.cell(row=row, column=28, value=f"=IFERROR(IF(AND((N{row} + N{row-1}) / 2 >= 2, (N{row} + N{row-1}) / 2 < 3, (O{row} >= 1), (O{row} < 2)), J{row} * O{row} * (N{row} + N{row-1}) / 2, 0), 0)")
-                ws.cell(row=row, column=29, value=f"=IFERROR(IF(AND((N{row} + N{row-1}) / 2 >= 3, (N{row} + N{row-1}) / 2 < 4, (O{row} >= 1), (O{row} < 2)), J{row} * O{row} * (N{row} + N{row-1}) / 2, 0), 0)")
-                ws.cell(row=row, column=30, value=f"=IFERROR(IF(AND((N{row} + N{row-1}) / 2 >= 4, (N{row} + N{row-1}) / 2 < 5, (O{row} >= 1), (O{row} < 2)), J{row} * O{row} * (N{row} + N{row-1}) / 2, 0), 0)")
-                ws.cell(row=row, column=31, value=f"=IFERROR(IF(AND((N{row} + N{row-1}) / 2 >= 5, (N{row} + N{row-1}) / 2 < 6, (O{row} >= 1), (O{row} < 2)), J{row} * O{row} * (N{row} + N{row-1}) / 2, 0), 0)")
-                ws.cell(row=row, column=32, value=f"=IFERROR(IF(AND((N{row} + N{row-1}) / 2 >= 6, (O{row} >= 1), (O{row} < 2)), J{row} * O{row} * (N{row} + N{row-1}) / 2, 0), 0)")
+                # Excavation depth bands
+                avg_depth = f"(N{row} + N{row-1}) / 2"
+                for i in range(7):
+                    if i == 0:
+                        cond = f"{avg_depth} < 1"
+                    elif i == 6:
+                        cond = f"{avg_depth} >= 6"
+                    else:
+                        cond = f"{avg_depth} >= {i}, {avg_depth} < {i+1}"
+                    
+                    vol_calc = f"J{row} * O{row} * {avg_depth}"
+                    ws.cell(row=row, column=18+i, value=f"=IFERROR(IF(AND({cond}, (O{row} < 1)), {vol_calc}, 0), 0)")
+                    ws.cell(row=row, column=26+i, value=f"=IFERROR(IF(AND({cond}, (O{row} >= 1), (O{row} < 2)), {vol_calc}, 0), 0)")
 
                 ws.cell(row=row, column=34, value=f"=(J{row} * O{row} * (D{row} + E{row} + F{row}) - PI() * ( (D{row}/2)^2 ) * J{row})")
                 ws.cell(row=row, column=35, value=f"=J{row} * O{row} * 0.2")
