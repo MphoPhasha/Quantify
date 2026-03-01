@@ -49,7 +49,10 @@ async def quantify_endpoint(
                     zip_ref.extractall(session_dir)
                 os.remove(file_path) # Clean up the zip itself
 
-        # Run quantification using the session directory as the root_folder
+        # Generate a unique output filename for this session
+        unique_filename = f"Quantified_{network_type.lower()}_{session_id[:8]}.xlsx"
+        
+        # Run quantification
         output_file = run_quantification(
             network_type=network_type,
             mhc_filename=mhc_filename.lower(),
@@ -58,15 +61,15 @@ async def quantify_endpoint(
             custom_branches=[custom_branch] if custom_branch else None
         )
 
-        # Move output file to a static location or handle it
-        final_output_path = f"static/{output_file}"
+        # The backend generated 'output_file', we rename it to our unique version
+        final_output_path = os.path.join("static", unique_filename)
         if os.path.exists(output_file):
             shutil.move(output_file, final_output_path)
 
         return {
             "status": "success", 
-            "message": f"Successfully generated {output_file}", 
-            "file_url": f"/static/{output_file}"
+            "message": f"Successfully generated quantification", 
+            "file_url": f"/static/{unique_filename}"
         }
 
     except Exception as e:
